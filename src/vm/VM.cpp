@@ -99,7 +99,11 @@ VM::VM() {
 VM::~VM() {
     if (stack) {
         if (stackIsMMap) {
+#ifdef _WIN32
+            VirtualFree(stack, 0, MEM_RELEASE);
+#else
             munmap(stack, STACK_BYTES + GUARD_SIZE);
+#endif
         } else {
             delete[] stack;
         }
