@@ -282,7 +282,14 @@ InterpretResult VM::run(int targetFrameDepth) {
 
     for (;;) {
         uint8_t instruction;
-        switch (instruction = READ_BYTE()) {
+        instruction = READ_BYTE();
+        if (collectCoverage) {
+            Chunk *chunk = frame->closure->function->chunk;
+            size_t offset = static_cast<size_t>(frame->ip - chunk->code.data() - 1);
+            if (offset < chunk->coverage.size())
+                chunk->coverage[offset] = 1;
+        }
+        switch (instruction) {
         case static_cast<uint8_t>(OpCode::OP_NOP):
             break;
         case static_cast<uint8_t>(OpCode::OP_CONSTANT): {
