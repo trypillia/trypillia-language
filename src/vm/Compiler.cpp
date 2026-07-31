@@ -1020,13 +1020,11 @@ class CompilerVisitor : public ASTVisitor {
         std::ifstream file(path);
         if (!file.is_open()) {
             // Fallback to <cwd>/lib/<path>
-            char cwd[4096];
-            if (getcwd(cwd, sizeof(cwd))) {
-                std::string libPath = std::string(cwd) + "/lib/" + path.substr(path.find_last_of('/') + 1);
-                file.open(libPath);
-                if (file.is_open()) {
-                    path = libPath;
-                }
+            std::string cwd = std::filesystem::current_path().string();
+            std::string libPath = cwd + "/lib/" + path.substr(path.find_last_of('/') + 1);
+            file.open(libPath);
+            if (file.is_open()) {
+                path = libPath;
             }
         }
 
