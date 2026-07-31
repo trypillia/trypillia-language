@@ -615,6 +615,7 @@ class CompilerVisitor : public ASTVisitor {
         for (auto &stmt : node->body)
             stmt->accept(&funcCompiler);
         funcCompiler.emitBytes(static_cast<uint8_t>(OpCode::OP_NIL), static_cast<uint8_t>(OpCode::OP_RETURN));
+        func->chunk->initCoverage();
         func->upvalueCount = static_cast<int>(funcCompiler.upvalues.size());
         emitBytes(static_cast<uint8_t>(OpCode::OP_CLOSURE), static_cast<uint8_t>(chunk->addConstant(func)));
         for (const auto &upval : funcCompiler.upvalues) {
@@ -774,6 +775,7 @@ class CompilerVisitor : public ASTVisitor {
         funcCompiler.emitByte(static_cast<uint8_t>(OpCode::OP_NIL));
         funcCompiler.emitByte(static_cast<uint8_t>(OpCode::OP_RETURN));
 
+        func->chunk->initCoverage();
         func->upvalueCount = static_cast<int>(funcCompiler.upvalues.size());
 
         emitBytes(static_cast<uint8_t>(OpCode::OP_CLOSURE), static_cast<uint8_t>(chunk->addConstant(func)));
@@ -860,6 +862,7 @@ class CompilerVisitor : public ASTVisitor {
             funcCompiler.emitByte(static_cast<uint8_t>(OpCode::OP_RETURN));
         }
 
+        func->chunk->initCoverage();
         func->upvalueCount = static_cast<int>(funcCompiler.upvalues.size());
 
         emitBytes(static_cast<uint8_t>(OpCode::OP_CLOSURE), static_cast<uint8_t>(chunk->addConstant(func)));
@@ -1092,6 +1095,8 @@ ObjFunction *Compiler::compile(ASTNode *ast, SymbolTable *globals) {
     ast->accept(&visitor);
 
     visitor.emitBytes(static_cast<uint8_t>(OpCode::OP_NIL), static_cast<uint8_t>(OpCode::OP_RETURN));
+
+    script->chunk->initCoverage();
 
     return script;
 }
