@@ -24,7 +24,7 @@ extern "C" void stackGuardHandler(int sig, siginfo_t *info, void *ctx) {
         void *fault = info->si_addr;
         if (fault >= (void *)guardStart && fault < (void *)guardEnd) {
             if (stackOverflowJmpBuf) {
-                siglongjmp(stackOverflowJmpBuf->buf, 1);
+                longjmp(stackOverflowJmpBuf->buf, 1);
             }
         }
     }
