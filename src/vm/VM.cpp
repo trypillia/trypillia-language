@@ -198,7 +198,7 @@ InterpretResult VM::interpret(ObjFunction *function) {
 
 InterpretResult VM::runtimeError(const std::string &message) {
     if (catchJumpEnabled) {
-        siglongjmp(catchJmpBuf, 1);
+        longjmp(catchJmpBuf, 1);
     }
     if (!suppressRuntimeErrors) {
         std::cerr << "\n ૮ ˶ᵔ ᵕ ᵔ˶ ა \n / づ 📝 ♡ \n\n";
