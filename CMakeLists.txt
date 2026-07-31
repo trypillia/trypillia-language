@@ -47,8 +47,11 @@ target_link_libraries(trypillia trypillia_core)
 add_executable(trypillia-test src/test_runner_main.cpp)
 target_link_libraries(trypillia-test trypillia_core)
 
-add_executable(trypillia-lsp src/lsp/LSPMain.cpp src/lsp/LSP.cpp)
-target_link_libraries(trypillia-lsp trypillia_core)
+option(TRYPILLIA_BUILD_LSP "Build the LSP server" ON)
+if(TRYPILLIA_BUILD_LSP)
+    add_executable(trypillia-lsp src/lsp/LSPMain.cpp src/lsp/LSP.cpp)
+    target_link_libraries(trypillia-lsp trypillia_core)
+endif()
 
 # Explicitly link atomic for 32-bit ARM (like Android/Termux armv7)
 include(CheckLibraryExists)
