@@ -1028,7 +1028,7 @@ bool VM::executeCall(uint8_t argCount) {
                          std::to_string(argCount) + ".");
             return false;
         }
-        if (sigsetjmp(assertJmpBuf, 1) == 0) {
+        if (setjmp(assertJmpBuf) == 0) {
             assertJumpEnabled = true;
             VMValue result = native->function(argCount, stack + (stackTop - stack) - argCount);
             assertJumpEnabled = false;
