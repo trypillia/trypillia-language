@@ -1,6 +1,6 @@
 #pragma once
-#include "Chunk.h"
-#include "Value.h"
+#include "../compiler/Chunk.h"
+#include "../compiler/Value.h"
 #include <cstddef>
 
 // ============================================================

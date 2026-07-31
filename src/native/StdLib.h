@@ -1,8 +1,8 @@
 #ifndef TRYPILLIA_STDLIB_H
 #define TRYPILLIA_STDLIB_H
 
-#include "../symbol/SymbolTable.h"
-#include "../vm/VM.h"
+#include "../frontend/symbol/SymbolTable.h"
+#include "../vm/core/VM.h"
 #include "list/List.h"
 #include "map/Map.h"
 #include "os/OS.h"

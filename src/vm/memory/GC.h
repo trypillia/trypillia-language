@@ -1,7 +1,7 @@
 #ifndef TRYPILLIA_GC_H
 #define TRYPILLIA_GC_H
 
-#include "../Value.h"
+#include "../compiler/Value.h"
 
 class VM;
 

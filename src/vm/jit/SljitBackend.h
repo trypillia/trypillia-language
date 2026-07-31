@@ -1,6 +1,6 @@
 #pragma once
-#include "JitABI.h"
-#include "JitEmitter.h"
+#include "ABI.h"
+#include "Emitter.h"
 #include "sljitLir.h"
 #include <cstring>
 #include <iostream>

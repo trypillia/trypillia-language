@@ -1,8 +1,8 @@
 #ifndef STD_LIST_H
 #define STD_LIST_H
 
-#include "../../symbol/SymbolTable.h"
-#include "../../vm/VM.h"
+#include "../../frontend/symbol/SymbolTable.h"
+#include "../../vm/core/VM.h"
 
 namespace StdLib {
 namespace ListModule {

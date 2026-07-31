@@ -1,9 +1,9 @@
 #include "SemanticAnalyzer.h"
 #include "../lexer/Lexer.h"
-#include "../native/StdLib.h"
+#include "../../native/StdLib.h"
 #include "../parser/Parser.h"
 #include "../symbol/SymbolTable.h"
-#include "../utils/ErrorHandling.h"
+#include "../../utils/ErrorHandling.h"
 #include <fstream>
 #include <iostream>
 #include <map>

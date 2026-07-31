@@ -199,7 +199,7 @@ static VMValue assertThrowsNative(int argCount, VMValue *args) {
     auto savedStackTop = vm->stackTop;
     auto savedFrameCount = vm->frames.size();
 
-    if (setjmp(vm->catchJmpBuf, 1) == 0) {
+    if (setjmp(vm->catchJmpBuf) == 0) {
         vm->catchJumpEnabled = true;
         vm->suppressRuntimeErrors = true;
 
@@ -384,7 +384,7 @@ static VMValue itNative(int argCount, VMValue *args) {
     auto savedFrameCount = vm->frames.size();
     bool passed = true;
 
-    if (setjmp(vm->catchJmpBuf, 1) == 0) {
+    if (setjmp(vm->catchJmpBuf) == 0) {
         vm->catchJumpEnabled = true;
 
         vm->push(fn);
@@ -466,7 +466,7 @@ static VMValue fitNative(int argCount, VMValue *args) {
     auto savedFrameCount = vm->frames.size();
     bool passed = true;
 
-    if (setjmp(vm->catchJmpBuf, 1) == 0) {
+    if (setjmp(vm->catchJmpBuf) == 0) {
         vm->catchJumpEnabled = true;
 
         vm->push(fn);

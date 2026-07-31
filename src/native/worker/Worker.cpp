@@ -1,8 +1,8 @@
 #include "Worker.h"
-#include "../../lexer/Lexer.h"
-#include "../../parser/Parser.h"
-#include "../../semantic/SemanticAnalyzer.h"
-#include "../../vm/Compiler.h"
+#include "../../frontend/lexer/Lexer.h"
+#include "../../frontend/parser/Parser.h"
+#include "../../frontend/semantic/SemanticAnalyzer.h"
+#include "../../vm/compiler/BytecodeCompiler.h"
 #include "../StdLib.h"
 #include <condition_variable>
 #include <fstream>

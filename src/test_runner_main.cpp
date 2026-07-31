@@ -1,9 +1,9 @@
-#include "ast/ASTOptimizer.h"
-#include "lexer/Lexer.h"
-#include "parser/Parser.h"
-#include "semantic/SemanticAnalyzer.h"
-#include "vm/Compiler.h"
-#include "vm/VM.h"
+#include "frontend/ast/ASTOptimizer.h"
+#include "frontend/lexer/Lexer.h"
+#include "frontend/parser/Parser.h"
+#include "frontend/semantic/SemanticAnalyzer.h"
+#include "vm/compiler/BytecodeCompiler.h"
+#include "vm/core/VM.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>

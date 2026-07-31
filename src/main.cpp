@@ -1,10 +1,10 @@
-#include "ast/ASTOptimizer.h"
-#include "lexer/Lexer.h"
+#include "frontend/ast/ASTOptimizer.h"
+#include "frontend/lexer/Lexer.h"
 #include "native/os/OS.h"
-#include "parser/Parser.h"
-#include "semantic/SemanticAnalyzer.h"
-#include "vm/Compiler.h"
-#include "vm/VM.h"
+#include "frontend/parser/Parser.h"
+#include "frontend/semantic/SemanticAnalyzer.h"
+#include "vm/compiler/BytecodeCompiler.h"
+#include "vm/core/VM.h"
 #include "vm/serializer/Serializer.h"
 #include <fstream>
 #include <iostream>

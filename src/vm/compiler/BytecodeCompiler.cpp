@@ -1,9 +1,9 @@
-#include "Compiler.h"
-#include "../lexer/Lexer.h"
-#include "../native/StdLib.h"
-#include "../parser/Parser.h"
-#include "../symbol/SymbolTable.h"
-#include "../utils/ErrorHandling.h"
+#include "BytecodeCompiler.h"
+#include "../../frontend/lexer/Lexer.h"
+#include "../../native/StdLib.h"
+#include "../../frontend/parser/Parser.h"
+#include "../../frontend/symbol/SymbolTable.h"
+#include "../../utils/ErrorHandling.h"
 #include <fstream>
 #include <functional>
 #include <iostream>

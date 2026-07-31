@@ -1,6 +1,6 @@
-#include "JIT.h"
-#include "OpCode.h"
-#include "UniversalEmitter.h"
+#include "JITCompiler.h"
+#include "../compiler/OpCode.h"
+#include "SljitBackend.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>

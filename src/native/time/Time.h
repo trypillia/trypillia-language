@@ -1,8 +1,8 @@
 #ifndef STD_TIME_H
 #define STD_TIME_H
 
-#include "../../symbol/SymbolTable.h"
-#include "../../vm/VM.h"
+#include "../../frontend/symbol/SymbolTable.h"
+#include "../../vm/core/VM.h"
 
 namespace StdLib {
 namespace TimeModule {

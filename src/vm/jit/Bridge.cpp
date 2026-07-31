@@ -1,5 +1,5 @@
-#include "../VM.h"
-#include "ObjectRuntime.h"
+#include "../core/VM.h"
+#include "../memory/ObjectRuntime.h"
 #include <cmath>
 #include <cstring>
 #include <vector>

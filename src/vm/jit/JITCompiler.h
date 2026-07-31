@@ -1,8 +1,8 @@
 #ifndef TRYPILLIA_JIT_H
 #define TRYPILLIA_JIT_H
 
-#include "Chunk.h"
-#include "JitEmitter.h"
+#include "../compiler/Chunk.h"
+#include "Emitter.h"
 #include <memory>
 #include <variant>
 

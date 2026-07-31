@@ -1,8 +1,8 @@
 #ifndef TRYPILLIA_WEBSOCKET_H
 #define TRYPILLIA_WEBSOCKET_H
 
-#include "../../symbol/SymbolTable.h"
-#include "../../vm/VM.h"
+#include "../../frontend/symbol/SymbolTable.h"
+#include "../../vm/core/VM.h"
 
 namespace StdLib {
 namespace WebSocketModule {

@@ -1,5 +1,5 @@
 #pragma once
-#include "../VM.h"
+#include "../core/VM.h"
 #include <string>
 
 bool isMethodAbstract(const VMValue &method);

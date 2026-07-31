@@ -1,7 +1,7 @@
 #ifndef SERIALIZER_H
 #define SERIALIZER_H
 
-#include "../Chunk.h"
+#include "../compiler/Chunk.h"
 #include <fstream>
 #include <memory>
 #include <string>

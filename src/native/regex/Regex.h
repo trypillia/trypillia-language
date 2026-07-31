@@ -1,8 +1,8 @@
 #ifndef STD_REGEX_H
 #define STD_REGEX_H
 
-#include "../../symbol/SymbolTable.h"
-#include "../../vm/VM.h"
+#include "../../frontend/symbol/SymbolTable.h"
+#include "../../vm/core/VM.h"
 
 namespace StdLib {
 namespace RegexModule {

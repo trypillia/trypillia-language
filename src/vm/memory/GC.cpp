@@ -1,6 +1,6 @@
 #include "GC.h"
-#include "../Chunk.h"
-#include "../VM.h"
+#include "../compiler/Chunk.h"
+#include "../core/VM.h"
 #include <iostream>
 
 #include <vector>

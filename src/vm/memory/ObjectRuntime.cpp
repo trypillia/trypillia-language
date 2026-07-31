@@ -1,5 +1,5 @@
 #include "ObjectRuntime.h"
-#include "../VM.h"
+#include "../core/VM.h"
 #include <string>
 
 bool isMethodAbstract(const VMValue &method) {
@@ -86,78 +86,6 @@ bool checkAccess(VMAccessModifier modifier, ObjClass *klass, const std::string &
         return false;
     }
     return true;
-}
-
-VMValue VM::callClosure(VMValue closureVal, int argCount, VMValue *args) {
-    if (!closureVal.isClosure())
-        return nullptr;
-    auto closure = closureVal.asClosure();
-
-    int initialFrameCount = static_cast<int>(frames.size());
-
-    push(closureVal);
-    for (int i = 0; i < argCount; i++) {
-        push(args[i]);
-    }
-
-    CallFrame newFrame;
-    newFrame.closure = closure;
-    newFrame.ip = closure->function->chunk->code.data();
-    newFrame.stackStart = static_cast<int>((stackTop - stack) - argCount - 1);
-    frames.push_back(newFrame);
-
-    InterpretResult result = run(initialFrameCount);
-    if (result == InterpretResult::INTERPRET_RUNTIME_ERROR) {
-        return nullptr;
-    }
-
-    return pop();
-}
-
-VMValue VM::instantiateClass(VMValue classVal, int argCount, VMValue *args) {
-    if (!classVal.isClass())
-        return nullptr;
-    auto klass = classVal.asClass();
-    if (klass->isAbstract)
-        return nullptr;
-    for (auto const &[name, method] : klass->methods) {
-        if (isMethodAbstract(method))
-            return nullptr;
-    }
-    auto instance = new ObjInstance(klass);
-
-    if (klass->methods.count("init")) {
-        auto initMethod = klass->methods["init"];
-        int minArity = getMethodMinArity(initMethod);
-        int maxArity = getMethodMaxArity(initMethod);
-        if (minArity != -1 && (argCount < minArity || argCount > maxArity))
-            return nullptr;
-        while (maxArity != -1 && argCount < maxArity) {
-            // Pad with nil
-            VMValue nilVal = nullptr;
-            // We can't easily pad here, rely on caller
-            return nullptr;
-        }
-
-        if (initMethod.isClosure()) {
-            push(instance);
-            for (int i = 0; i < argCount; i++)
-                push(args[i]);
-            auto closure = initMethod.asClosure();
-            CallFrame newFrame;
-            newFrame.closure = closure;
-            newFrame.ip = closure->function->chunk->code.data();
-            newFrame.stackStart = static_cast<int>((stackTop - stack) - argCount - 1);
-            frames.push_back(newFrame);
-            int initialDepth = static_cast<int>(frames.size() - 1);
-            InterpretResult res = run(initialDepth);
-            frames.pop_back();
-            if (res == InterpretResult::INTERPRET_RUNTIME_ERROR)
-                return nullptr;
-            return instance;
-        }
-    }
-    return instance;
 }
 
 ObjUpvalue *VM::captureUpvalue(VMValue *local) {

@@ -1,8 +1,8 @@
 #ifndef TRYPILLIA_VM_H
 #define TRYPILLIA_VM_H
 
-#include "Chunk.h"
-#include "JIT.h"
+#include "../compiler/Chunk.h"
+#include "../jit/JITCompiler.h"
 #include <csignal>
 #include <csetjmp>
 #include <string>

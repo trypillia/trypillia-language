@@ -1,8 +1,8 @@
 #ifndef TRYPILLIA_NATIVE_CORE_H
 #define TRYPILLIA_NATIVE_CORE_H
 
-#include "../../symbol/SymbolTable.h"
-#include "../../vm/VM.h"
+#include "../../frontend/symbol/SymbolTable.h"
+#include "../../vm/core/VM.h"
 
 namespace StdLib {
 namespace Core {

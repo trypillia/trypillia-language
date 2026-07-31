@@ -5,7 +5,7 @@
 // If it's defined in VM.h or somewhere else, we might need to include it.
 // Assuming it's defined in some header like "VM.h" or "Value.h" includes it.
 // Actually, looking at VM.cpp, it included "VM.h". Let's just include "VM.h" which has ObjString.
-#include "VM.h"
+#include "../core/VM.h"
 
 VMValue::VMValue(const std::string &s) {
     Obj *obj = new ObjString(s);
