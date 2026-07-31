@@ -111,6 +111,19 @@ VM::~VM() {
     }
 }
 
+void VM::resetCoverage() {
+    Obj *obj = objects;
+    while (obj) {
+        if (obj->type == ObjType::OBJ_FUNCTION) {
+            auto func = reinterpret_cast<ObjFunction *>(obj);
+            if (func->chunk) {
+                func->chunk->resetCoverage();
+            }
+        }
+        obj = obj->nextObj;
+    }
+}
+
 void VM::resetStack() {
     stackTop = stack;
 }

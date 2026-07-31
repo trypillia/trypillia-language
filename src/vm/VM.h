@@ -63,6 +63,7 @@ class VM {
     std::unordered_map<void *, JitFunc> compiledFuncs;
 
     bool suppressRuntimeErrors = false;
+    bool collectCoverage = false;
     jmp_buf assertJmpBuf;
     bool assertJumpEnabled = false;
     jmp_buf catchJmpBuf;
@@ -81,6 +82,8 @@ class VM {
     VMValue instantiateClass(VMValue classVal, int argCount, VMValue *args);
 
     InterpretResult interpret(ObjFunction *function);
+
+    void resetCoverage();
 };
 
 #endif // TRYPILLIA_VM_H
