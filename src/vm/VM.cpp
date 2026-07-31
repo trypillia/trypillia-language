@@ -9,7 +9,7 @@
 
 thread_local VM *currentVM = nullptr;
 struct JmpBufHolder {
-    sigjmp_buf buf;
+    jmp_buf buf;
 };
 static thread_local JmpBufHolder *stackOverflowJmpBuf = nullptr;
 static std::once_flag guardHandlerFlag;
