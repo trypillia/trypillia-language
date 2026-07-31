@@ -63,9 +63,9 @@ class VM {
     std::unordered_map<void *, JitFunc> compiledFuncs;
 
     bool suppressRuntimeErrors = false;
-    sigjmp_buf assertJmpBuf;
+    jmp_buf assertJmpBuf;
     bool assertJumpEnabled = false;
-    sigjmp_buf catchJmpBuf;
+    jmp_buf catchJmpBuf;
     bool catchJumpEnabled = false;
 
     struct PromiseMicrotask {
