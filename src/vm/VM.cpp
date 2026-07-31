@@ -2,7 +2,6 @@
 #include "runtime/GC.h"
 
 #include <sys/mman.h>
-#include <unistd.h>
 #include <csignal>
 #include <csetjmp>
 #include <mutex>
