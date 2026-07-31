@@ -8,7 +8,12 @@
 #include <iostream>
 #include <map>
 #include <stdexcept>
+#ifdef _WIN32
+#include <direct.h>
+#define getcwd _getcwd
+#else
 #include <unistd.h>
+#endif
 
 class SemanticVisitor : public ASTVisitor {
   public:
