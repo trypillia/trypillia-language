@@ -1,7 +1,11 @@
 #include "VM.h"
 #include "runtime/GC.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/mman.h>
+#endif
 #include <csignal>
 #include <csetjmp>
 #include <mutex>
