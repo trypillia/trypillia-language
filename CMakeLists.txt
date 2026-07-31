@@ -37,29 +37,30 @@ endif()
 
 include_directories(include ${sljit_SOURCE_DIR}/sljit_src)
 
-add_executable(trypillia src/main.cpp ${CORE_SOURCES} ${sljit_SOURCE_DIR}/sljit_src/sljitLir.c)
-target_link_libraries(trypillia mbedtls mbedx509 mbedcrypto)
+add_library(trypillia_core STATIC ${CORE_SOURCES} ${sljit_SOURCE_DIR}/sljit_src/sljitLir.c)
+target_include_directories(trypillia_core PUBLIC include ${sljit_SOURCE_DIR}/sljit_src)
+target_link_libraries(trypillia_core PUBLIC mbedtls mbedx509 mbedcrypto)
 
-add_executable(trypillia-test src/test_runner_main.cpp ${CORE_SOURCES} ${sljit_SOURCE_DIR}/sljit_src/sljitLir.c)
-target_link_libraries(trypillia-test mbedtls mbedx509 mbedcrypto)
+add_executable(trypillia src/main.cpp)
+target_link_libraries(trypillia trypillia_core)
 
-add_executable(trypillia-lsp src/lsp/LSPMain.cpp src/lsp/LSP.cpp ${CORE_SOURCES} ${sljit_SOURCE_DIR}/sljit_src/sljitLir.c)
-target_link_libraries(trypillia-lsp mbedtls mbedx509 mbedcrypto)
+add_executable(trypillia-test src/test_runner_main.cpp)
+target_link_libraries(trypillia-test trypillia_core)
+
+add_executable(trypillia-lsp src/lsp/LSPMain.cpp src/lsp/LSP.cpp)
+target_link_libraries(trypillia-lsp trypillia_core)
 
 # Explicitly link atomic for 32-bit ARM (like Android/Termux armv7)
 include(CheckLibraryExists)
 check_library_exists(atomic __atomic_fetch_add_4 "" HAVE_LIBATOMIC)
 if(HAVE_LIBATOMIC OR ANDROID OR CMAKE_SYSTEM_NAME MATCHES "Android|Linux")
-    target_link_libraries(trypillia atomic)
-    target_link_libraries(trypillia-test atomic)
-    target_link_libraries(trypillia-lsp atomic)
+    target_link_libraries(trypillia_core PUBLIC atomic)
 endif()
 
 # Explicitly link filesystem for older compilers (Clang 9 in Termux)
 find_library(CXXFS_LIB NAMES c++fs stdc++fs c++experimental)
 if(CXXFS_LIB)
-    target_link_libraries(trypillia ${CXXFS_LIB})
-    target_link_libraries(trypillia-lsp ${CXXFS_LIB})
+    target_link_libraries(trypillia_core PUBLIC ${CXXFS_LIB})
 endif()
 
 if(DEFINED ARTIFACT_NAME)
