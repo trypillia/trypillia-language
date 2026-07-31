@@ -238,7 +238,7 @@ InterpretResult VM::run(int targetFrameDepth) {
 
     JmpBufHolder holder;
     stackOverflowJmpBuf = &holder;
-    if (sigsetjmp(holder.buf, 1) != 0) {
+    if (setjmp(holder.buf) != 0) {
         stackOverflowJmpBuf = nullptr;
         jitClosure = nullptr;
         return runtimeError("Stack overflow.");
