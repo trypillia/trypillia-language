@@ -55,15 +55,30 @@ static void installGuardHandler() {
 VM::VM() {
     installGuardHandler();
 
+#ifndef _WIN32
     // Allocate alternate signal stack for this thread
     stack_t sigstk;
     sigstk.ss_sp = mmap(nullptr, SIGSTKSZ, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     sigstk.ss_size = SIGSTKSZ;
     sigstk.ss_flags = 0;
     sigaltstack(&sigstk, nullptr);
+#endif
 
     // Allocate VM stack with guard page at the end
     size_t allocSize = STACK_BYTES + GUARD_SIZE;
+#ifdef _WIN32
+    void *mem = VirtualAlloc(nullptr, allocSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (mem == nullptr) {
+        stack = new VMValue[STACK_MAX]();
+        stackIsMMap = false;
+        std::cerr << "Warning: VirtualAlloc failed, stack without guard page" << std::endl;
+    } else {
+        stack = (VMValue *)mem;
+        DWORD oldProtect;
+        VirtualProtect((char *)mem + STACK_BYTES, GUARD_SIZE, PAGE_NOACCESS, &oldProtect);
+        stackIsMMap = true;
+    }
+#else
     void *mem = mmap(nullptr, allocSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mem == MAP_FAILED) {
         stack = new VMValue[STACK_MAX]();
@@ -74,6 +89,7 @@ VM::VM() {
         mprotect((char *)mem + STACK_BYTES, GUARD_SIZE, PROT_NONE);
         stackIsMMap = true;
     }
+#endif
     stackTop = stack;
 
     currentVM = this;
