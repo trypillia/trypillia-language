@@ -217,6 +217,7 @@ class Chunk {
     std::vector<uint8_t> code;
     std::vector<VMValue> constants;
     std::vector<int> lines;
+    std::vector<uint8_t> coverage;
 
     Chunk() = default;
 
@@ -240,6 +241,14 @@ class Chunk {
         }
         constants.push_back(value);
         return static_cast<int>(constants.size() - 1);
+    }
+
+    void initCoverage() {
+        coverage.assign(code.size(), 0);
+    }
+
+    void resetCoverage() {
+        std::fill(coverage.begin(), coverage.end(), 0);
     }
 };
 
