@@ -217,7 +217,7 @@ class Chunk {
     std::vector<uint8_t> code;
     std::vector<VMValue> constants;
     std::vector<int> lines;
-    std::vector<uint8_t> coverage;
+    std::vector<uint32_t> coverage;
 
     Chunk() = default;
 

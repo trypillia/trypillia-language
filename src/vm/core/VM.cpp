@@ -225,7 +225,7 @@ InterpretResult VM::run(int targetFrameDepth) {
             Chunk *chunk = frame->closure->function->chunk;
             size_t offset = static_cast<size_t>(frame->ip - chunk->code.data() - 1);
             if (offset < chunk->coverage.size())
-                chunk->coverage[offset] = 1;
+                chunk->coverage[offset]++;
         }
         switch (instruction) {
         case static_cast<uint8_t>(OpCode::OP_NOP):
