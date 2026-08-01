@@ -5,9 +5,10 @@
 
 #include "../core/VM.h"
 
-class LcovReporter {
- public:
-  static void generateReport(VM* vm, const std::string& outputPath);
+class LcovReporter
+{
+  public:
+    static void generateReport(VM *vm, const std::string &outputPath);
 };
 
-#endif  // TRYPILLIA_LCOV_REPORTER_H
+#endif // TRYPILLIA_LCOV_REPORTER_H

@@ -4,11 +4,13 @@
 #include "../../frontend/symbol/SymbolTable.h"
 #include "../../vm/core/VM.h"
 
-namespace StdLib {
-namespace Test {
-void registerAll(VM* vm);
-void registerSymbols(SymbolTable* scope);
-}  // namespace Test
-}  // namespace StdLib
+namespace StdLib
+{
+namespace Test
+{
+void registerAll(VM *vm);
+void registerSymbols(SymbolTable *scope);
+} // namespace Test
+} // namespace StdLib
 
 #endif

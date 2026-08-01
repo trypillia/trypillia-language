@@ -4,26 +4,28 @@
 #include <string>
 #include <unordered_map>
 
-class Symbol {
- public:
-  std::string name;
-  std::string type;
-  bool isConst;
+class Symbol
+{
+  public:
+    std::string name;
+    std::string type;
+    bool isConst;
 };
 
-class SymbolTable {
- private:
-  std::unordered_map<std::string, Symbol> symbols;
-  SymbolTable* parent;
+class SymbolTable
+{
+  private:
+    std::unordered_map<std::string, Symbol> symbols;
+    SymbolTable *parent;
 
- public:
-  SymbolTable(SymbolTable* parent = nullptr);
+  public:
+    SymbolTable(SymbolTable *parent = nullptr);
 
-  bool define(const Symbol& symbol);
+    bool define(const Symbol &symbol);
 
-  Symbol* resolve(const std::string& name);
+    Symbol *resolve(const std::string &name);
 
-  SymbolTable* getParent() const;
+    SymbolTable *getParent() const;
 };
 
-#endif  // SYMBOL_TABLE_H
+#endif // SYMBOL_TABLE_H

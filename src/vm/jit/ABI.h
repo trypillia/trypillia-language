@@ -33,24 +33,21 @@
 static constexpr int OBJ_TYPE_OFFSET = offsetof(Obj, type);
 
 // --- ObjType enum values used in JIT comparisons ---
-static constexpr int OBJ_TYPE_CLOSURE_INT =
-    static_cast<int>(ObjType::OBJ_CLOSURE);
+static constexpr int OBJ_TYPE_CLOSURE_INT = static_cast<int>(ObjType::OBJ_CLOSURE);
 
 // --- ObjClosure ---
 // +0-31: Obj base (32 bytes)
 // +32: ObjClosure::function (ObjFunction*, 8 bytes)
 // +40: std::vector<ObjUpvalue*> upvalues (24 bytes)
 // sizeof(ObjClosure) = 64
-static constexpr int OBJ_CLOSURE_FUNCTION_OFFSET =
-    offsetof(ObjClosure, function);
+static constexpr int OBJ_CLOSURE_FUNCTION_OFFSET = offsetof(ObjClosure, function);
 
 // --- ObjFunction ---
 // +0-31: Obj base (32 bytes)
 // +32: std::string name (implementation-dependent size)
 // Then: arity, maxArity, chunk, isAbstract, statics, etc.
 // +jitAddr: void* (varies by platform)
-static constexpr int OBJ_FUNCTION_JITADDR_OFFSET =
-    offsetof(ObjFunction, jitAddr);
+static constexpr int OBJ_FUNCTION_JITADDR_OFFSET = offsetof(ObjFunction, jitAddr);
 
 // ============================================================
 // JIT virtual stack slot conventions
