@@ -13,6 +13,7 @@
 #include "frontend/semantic/SemanticAnalyzer.h"
 #include "vm/compiler/BytecodeCompiler.h"
 #include "vm/core/VM.h"
+#include "vm/coverage/LcovReporter.h"
 
 namespace fs = std::filesystem;
 
@@ -141,12 +142,25 @@ int main(int argc, char **argv)
     }
 
     std::string filter;
+    bool enableCoverage = false;
     int argStart = 1;
 
-    if (argc > 2 && strcmp(argv[1], "--filter") == 0)
+    while (argStart < argc)
     {
-        filter = argv[2];
-        argStart = 3;
+        if (strcmp(argv[argStart], "--filter") == 0 && argStart + 1 < argc)
+        {
+            filter = argv[argStart + 1];
+            argStart += 2;
+        }
+        else if (strcmp(argv[argStart], "--coverage") == 0)
+        {
+            enableCoverage = true;
+            argStart += 1;
+        }
+        else
+        {
+            break;
+        }
     }
 
     std::vector<std::string> rawPatterns;
@@ -167,6 +181,7 @@ int main(int argc, char **argv)
     int totalPassed = 0;
     int totalFailed = 0;
     int tapCounter = 0;
+    std::map<std::string, std::map<int, uint32_t>> globalCoverage;
 
     for (size_t fileIdx = 0; fileIdx < paths.size(); fileIdx++)
     {
@@ -230,11 +245,19 @@ int main(int argc, char **argv)
         auto oldBufErr = std::cerr.rdbuf(capturedErr.rdbuf());
 
         VM vm;
+        if (enableCoverage)
+        {
+            vm.collectCoverage = true;
+        }
         if (hasFocusedTests(source))
         {
             vm.globals["__test_only"] = VMValue(true);
         }
         InterpretResult result = vm.interpret(function);
+        if (enableCoverage)
+        {
+            LcovReporter::collectCoverage(&vm, globalCoverage);
+        }
 
         std::cout.rdbuf(oldBufOut);
         std::cerr.rdbuf(oldBufErr);
@@ -298,6 +321,11 @@ int main(int argc, char **argv)
         std::cout << "1.." << tapCounter << std::endl;
         std::cout << "# " << totalTests << " tests, " << totalPassed << " passed, " << totalFailed << " failed"
                   << std::endl;
+    }
+
+    if (enableCoverage && !globalCoverage.empty())
+    {
+        LcovReporter::writeReport(globalCoverage, "coverage.info");
     }
 
     return totalFailed;
