@@ -404,10 +404,6 @@ static VMValue describeNative(int argCount, VMValue *args)
     {
         return nullptr;
     }
-    if (isOnlyMode(vm))
-    {
-        return nullptr;
-    }
     std::string name = args[0].asString()->flatten();
 
     auto it = vm->globals.find("__test_describe");
@@ -641,7 +637,30 @@ static VMValue fdescribeNative(int argCount, VMValue *args)
 
     vm->globals["__test_describe"] = VMValue(name);
 
+    bool oldOnlyMode = isOnlyMode(vm);
+    if (oldOnlyMode)
+    {
+        vm->globals["__test_only"] = VMValue(false);
+    }
+
     vm->callClosure(args[1], 0, nullptr);
+
+    if (oldOnlyMode)
+    {
+        vm->globals["__test_only"] = VMValue(true);
+    }
+
+    auto errIt = vm->globals.find("__test_current_error");
+    if (errIt != vm->globals.end() && !errIt->second.isNil())
+    {
+        std::string msg = "Assertion failed outside of 'it' block";
+        if (errIt->second.isString())
+        {
+            msg = errIt->second.asString()->flatten();
+        }
+        failAssertion(vm, msg);
+        return nullptr;
+    }
 
     runCallbacks(vm, "__test_after");
 
