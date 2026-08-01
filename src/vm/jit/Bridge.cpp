@@ -16,14 +16,14 @@ extern "C" double jit_build_list_helper(double *args, int count)
     for (int i = 0; i < count; i++)
     {
         VMValue val;
-        memcpy(&val, &args[i], sizeof(double));
+        memcpy((void *)&val, &args[i], sizeof(double));
         elements[i] = val;
     }
     ObjList *list = new ObjList(elements);
 
     VMValue result(list);
     double dresult;
-    memcpy(&dresult, &result, sizeof(double));
+    memcpy((void *)&dresult, &result, sizeof(double));
     return dresult;
 }
 
@@ -33,23 +33,23 @@ extern "C" double jit_build_map_helper(double *args, int count)
     for (int i = 0; i < count; i++)
     {
         VMValue key, val;
-        memcpy(&key, &args[i * 2], sizeof(double));
-        memcpy(&val, &args[i * 2 + 1], sizeof(double));
+        memcpy((void *)&key, &args[i * 2], sizeof(double));
+        memcpy((void *)&val, &args[i * 2 + 1], sizeof(double));
         map->values[key] = val;
     }
 
     VMValue result(map);
     double dresult;
-    memcpy(&dresult, &result, sizeof(double));
+    memcpy((void *)&dresult, &result, sizeof(double));
     return dresult;
 }
 
 extern "C" double jit_index_get_helper(void *vm_ptr, double object_val, double index_val)
 {
     uint64_t objRaw;
-    memcpy(&objRaw, &object_val, sizeof(uint64_t));
+    memcpy((void *)&objRaw, &object_val, sizeof(uint64_t));
     uint64_t idxRaw;
-    memcpy(&idxRaw, &index_val, sizeof(uint64_t));
+    memcpy((void *)&idxRaw, &index_val, sizeof(uint64_t));
 
     bool isObj = (objRaw & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT);
     bool isNum = (idxRaw & QNAN) != QNAN;
@@ -61,13 +61,13 @@ extern "C" double jit_index_get_helper(void *vm_ptr, double object_val, double i
         {
             ObjList *list = (ObjList *)obj;
             double indexDouble;
-            memcpy(&indexDouble, &index_val, sizeof(double));
+            memcpy((void *)&indexDouble, &index_val, sizeof(double));
             int i = static_cast<int>(indexDouble);
             if (i >= 0 && i < static_cast<int>(list->elements.size()))
             {
                 VMValue result = list->elements[i];
                 double ret;
-                memcpy(&ret, &result, sizeof(double));
+                memcpy((void *)&ret, &result, sizeof(double));
                 return ret;
             }
         }
@@ -79,9 +79,9 @@ extern "C" double jit_index_get_helper(void *vm_ptr, double object_val, double i
 extern "C" double jit_index_set_helper(void *vm_ptr, double object_val, double index_val, double value_val)
 {
     uint64_t objRaw;
-    memcpy(&objRaw, &object_val, sizeof(uint64_t));
+    memcpy((void *)&objRaw, &object_val, sizeof(uint64_t));
     uint64_t idxRaw;
-    memcpy(&idxRaw, &index_val, sizeof(uint64_t));
+    memcpy((void *)&idxRaw, &index_val, sizeof(uint64_t));
 
     bool isObj = (objRaw & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT);
     bool isNum = (idxRaw & QNAN) != QNAN;
@@ -93,10 +93,10 @@ extern "C" double jit_index_set_helper(void *vm_ptr, double object_val, double i
         {
             ObjList *list = (ObjList *)obj;
             double indexDouble;
-            memcpy(&indexDouble, &index_val, sizeof(double));
+            memcpy((void *)&indexDouble, &index_val, sizeof(double));
             int i = static_cast<int>(indexDouble);
             VMValue val;
-            memcpy(&val, &value_val, sizeof(double));
+            memcpy((void *)&val, &value_val, sizeof(double));
             if (i >= 0 && i < static_cast<int>(list->elements.size()))
             {
                 list->elements[i] = val;
@@ -104,7 +104,7 @@ extern "C" double jit_index_set_helper(void *vm_ptr, double object_val, double i
         }
     }
     double ret;
-    memcpy(&ret, &value_val, sizeof(double));
+    memcpy((void *)&ret, &value_val, sizeof(double));
     return ret;
 }
 
@@ -112,7 +112,7 @@ extern "C" double jit_property_get_helper(void *vm_ptr, double object_val, const
 {
     VM *vm = static_cast<VM *>(vm_ptr);
     uint64_t objRaw;
-    memcpy(&objRaw, &object_val, sizeof(uint64_t));
+    memcpy((void *)&objRaw, &object_val, sizeof(uint64_t));
     std::string propName(name);
     VMValue result(nullptr);
 
@@ -143,7 +143,7 @@ extern "C" double jit_property_get_helper(void *vm_ptr, double object_val, const
         }
     }
     double ret;
-    memcpy(&ret, &result, sizeof(double));
+    memcpy((void *)&ret, &result, sizeof(double));
     return ret;
 }
 
@@ -151,7 +151,7 @@ extern "C" double jit_property_set_helper(void *vm_ptr, double object_val, const
 {
     VM *vm = static_cast<VM *>(vm_ptr);
     uint64_t objRaw;
-    memcpy(&objRaw, &object_val, sizeof(uint64_t));
+    memcpy((void *)&objRaw, &object_val, sizeof(uint64_t));
     std::string propName(name);
 
     bool isObj = (objRaw & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT);
@@ -159,7 +159,7 @@ extern "C" double jit_property_set_helper(void *vm_ptr, double object_val, const
     {
         Obj *obj = (Obj *)(uintptr_t)(objRaw & ~(SIGN_BIT | QNAN));
         VMValue val;
-        memcpy(&val, &value_val, sizeof(double));
+        memcpy((void *)&val, &value_val, sizeof(double));
         if (obj->type == ObjType::OBJ_INSTANCE)
         {
             ObjInstance *instance = (ObjInstance *)obj;
@@ -172,16 +172,16 @@ extern "C" double jit_property_set_helper(void *vm_ptr, double object_val, const
         }
     }
     double ret;
-    memcpy(&ret, &value_val, sizeof(double));
+    memcpy((void *)&ret, &value_val, sizeof(double));
     return ret;
 }
 
 extern "C" double jit_iter_has_next_helper(double index_val, double iterable_val)
 {
     uint64_t idxRaw;
-    memcpy(&idxRaw, &index_val, sizeof(uint64_t));
+    memcpy((void *)&idxRaw, &index_val, sizeof(uint64_t));
     uint64_t iterRaw;
-    memcpy(&iterRaw, &iterable_val, sizeof(uint64_t));
+    memcpy((void *)&iterRaw, &iterable_val, sizeof(uint64_t));
 
     bool result = false;
     bool isNum = (idxRaw & QNAN) != QNAN;
@@ -189,7 +189,7 @@ extern "C" double jit_iter_has_next_helper(double index_val, double iterable_val
     if (isNum && isObj)
     {
         double indexDouble;
-        memcpy(&indexDouble, &index_val, sizeof(double));
+        memcpy((void *)&indexDouble, &index_val, sizeof(double));
         int index = static_cast<int>(indexDouble);
         Obj *obj = (Obj *)(uintptr_t)(iterRaw & ~(SIGN_BIT | QNAN));
         if (obj->type == ObjType::OBJ_LIST)
@@ -205,7 +205,7 @@ extern "C" double jit_iter_has_next_helper(double index_val, double iterable_val
     }
     VMValue ret(result);
     double dret;
-    memcpy(&dret, &ret, sizeof(double));
+    memcpy((void *)&dret, &ret, sizeof(double));
     return dret;
 }
 
@@ -216,7 +216,7 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
     ObjClosure *savedJitClosure = vm->jitClosure;
 
     uint64_t calleeRaw;
-    memcpy(&calleeRaw, &callee_val, sizeof(uint64_t));
+    memcpy((void *)&calleeRaw, &callee_val, sizeof(uint64_t));
     bool isObj = (calleeRaw & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT);
     if (isObj)
     {
@@ -226,7 +226,7 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
             std::vector<VMValue> vmArgs(argCount);
             for (int i = 0; i < argCount; i++)
             {
-                memcpy(&vmArgs[i], &args[i + 1], sizeof(double));
+                memcpy((void *)&vmArgs[i], &args[i + 1], sizeof(double));
             }
             ObjNative *native = (ObjNative *)obj;
             result = native->function(argCount, vmArgs.data());
@@ -240,7 +240,7 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
             {
                 JitFunc nativeJitFunc = vm->compiledFuncs[function];
                 std::vector<double> freshArgs(argCount + 1 > 256 ? argCount + 1 : 256);
-                std::memcpy(freshArgs.data(), args, (argCount + 1) * sizeof(double));
+                std::memcpy((void *)freshArgs.data(), args, (argCount + 1) * sizeof(double));
                 vm->jitClosure = closure;
                 result = nativeJitFunc(vm, freshArgs.data(), argCount, argCount > 0 ? freshArgs[1] : 0.0);
                 vm->jitClosure = savedJitClosure;
@@ -250,10 +250,10 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
                 std::vector<VMValue> vmArgs(argCount);
                 for (int i = 0; i < argCount; i++)
                 {
-                    memcpy(&vmArgs[i], &args[i + 1], sizeof(double));
+                    memcpy((void *)&vmArgs[i], &args[i + 1], sizeof(double));
                 }
                 VMValue callee;
-                memcpy(&callee, &callee_val, sizeof(double));
+                memcpy((void *)&callee, &callee_val, sizeof(double));
                 vm->jitClosure = nullptr;
                 result = vm->callClosure(callee, argCount, vmArgs.data());
                 vm->jitClosure = savedJitClosure;
@@ -270,7 +270,7 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
                 vmArgs[0] = receiver;
                 for (int i = 0; i < argCount; i++)
                 {
-                    memcpy(&vmArgs[i + 1], &args[i + 1], sizeof(double));
+                    memcpy((void *)&vmArgs[i + 1], &args[i + 1], sizeof(double));
                 }
                 vm->jitClosure = nullptr;
                 result = vm->callClosure(method, argCount + 1, vmArgs.data());
@@ -283,7 +283,7 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
                 vmArgs[0] = receiver;
                 for (int i = 0; i < argCount; i++)
                 {
-                    memcpy(&vmArgs[i + 1], &args[i + 1], sizeof(double));
+                    memcpy((void *)&vmArgs[i + 1], &args[i + 1], sizeof(double));
                 }
                 result = native->function(argCount + 1, vmArgs.data());
             }
@@ -291,11 +291,11 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
         else if (obj->type == ObjType::OBJ_CLASS)
         {
             VMValue classVal;
-            memcpy(&classVal, &callee_val, sizeof(double));
+            memcpy((void *)&classVal, &callee_val, sizeof(double));
             std::vector<VMValue> vmArgs(argCount);
             for (int i = 0; i < argCount; i++)
             {
-                memcpy(&vmArgs[i], &args[i + 1], sizeof(double));
+                memcpy((void *)&vmArgs[i], &args[i + 1], sizeof(double));
             }
             vm->jitClosure = nullptr;
             result = vm->instantiateClass(classVal, argCount, vmArgs.data());
@@ -304,7 +304,7 @@ extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
     }
 
     double ret;
-    memcpy(&ret, &result, sizeof(double));
+    memcpy((void *)&ret, &result, sizeof(double));
     return ret;
 }
 
@@ -334,7 +334,7 @@ extern "C" double jit_get_global_helper(void *vm_ptr, const char *name)
         result = it->second;
     }
     double ret;
-    memcpy(&ret, &result, sizeof(double));
+    memcpy((void *)&ret, &result, sizeof(double));
     return ret;
 }
 
@@ -342,7 +342,7 @@ extern "C" void jit_set_global_helper(void *vm_ptr, const char *name, double val
 {
     VM *vm = static_cast<VM *>(vm_ptr);
     VMValue val;
-    memcpy(&val, &val_d, sizeof(double));
+    memcpy((void *)&val, &val_d, sizeof(double));
     vm->globals[name] = val;
 }
 
@@ -352,7 +352,7 @@ extern "C" double jit_create_class_helper(void *vm, const char *name)
 
     VMValue result(klass);
     double ret;
-    memcpy(&ret, &result, sizeof(double));
+    memcpy((void *)&ret, &result, sizeof(double));
     return ret;
 }
 
@@ -363,18 +363,18 @@ extern "C" double jit_create_abstract_class_helper(void *vm, const char *name)
 
     VMValue result(klass);
     double ret;
-    memcpy(&ret, &result, sizeof(double));
+    memcpy((void *)&ret, &result, sizeof(double));
     return ret;
 }
 
 extern "C" double jit_bind_method_helper(double class_val, double method_val, const char *name, int isAbstract)
 {
     uint64_t klassRaw, methodRaw;
-    memcpy(&klassRaw, &class_val, sizeof(uint64_t));
-    memcpy(&methodRaw, &method_val, sizeof(uint64_t));
+    memcpy((void *)&klassRaw, &class_val, sizeof(uint64_t));
+    memcpy((void *)&methodRaw, &method_val, sizeof(uint64_t));
     ObjClass *klass = (ObjClass *)(klassRaw & ~(QNAN | SIGN_BIT));
     VMValue method;
-    memcpy(&method, &methodRaw, sizeof(VMValue));
+    memcpy((void *)&method, &methodRaw, sizeof(VMValue));
     if (isAbstract)
     {
         if (method.isClosure())
@@ -390,11 +390,11 @@ extern "C" double jit_bind_method_helper(double class_val, double method_val, co
 extern "C" double jit_bind_static_method_helper(double class_val, double method_val, const char *name)
 {
     uint64_t klassRaw, methodRaw;
-    memcpy(&klassRaw, &class_val, sizeof(uint64_t));
-    memcpy(&methodRaw, &method_val, sizeof(uint64_t));
+    memcpy((void *)&klassRaw, &class_val, sizeof(uint64_t));
+    memcpy((void *)&methodRaw, &method_val, sizeof(uint64_t));
     ObjClass *klass = (ObjClass *)(klassRaw & ~(QNAN | SIGN_BIT));
     VMValue method;
-    memcpy(&method, &methodRaw, sizeof(VMValue));
+    memcpy((void *)&method, &methodRaw, sizeof(VMValue));
     klass->statics[name] = method;
     // String owned by JIT compiler
     return class_val;
@@ -403,8 +403,8 @@ extern "C" double jit_bind_static_method_helper(double class_val, double method_
 extern "C" void jit_inherit_helper(double subclass_val, double superclass_val)
 {
     uint64_t subRaw, supRaw;
-    memcpy(&subRaw, &subclass_val, sizeof(uint64_t));
-    memcpy(&supRaw, &superclass_val, sizeof(uint64_t));
+    memcpy((void *)&subRaw, &subclass_val, sizeof(uint64_t));
+    memcpy((void *)&supRaw, &superclass_val, sizeof(uint64_t));
     if ((subRaw & (QNAN | SIGN_BIT)) != (QNAN | SIGN_BIT))
         return;
     if ((supRaw & (QNAN | SIGN_BIT)) != (QNAN | SIGN_BIT))
@@ -429,8 +429,8 @@ extern "C" void jit_inherit_helper(double subclass_val, double superclass_val)
 extern "C" void jit_mixin_helper(double target_val, double mixin_val)
 {
     uint64_t targetRaw, mixinRaw;
-    memcpy(&targetRaw, &target_val, sizeof(uint64_t));
-    memcpy(&mixinRaw, &mixin_val, sizeof(uint64_t));
+    memcpy((void *)&targetRaw, &target_val, sizeof(uint64_t));
+    memcpy((void *)&mixinRaw, &mixin_val, sizeof(uint64_t));
     if ((targetRaw & (QNAN | SIGN_BIT)) != (QNAN | SIGN_BIT))
         return;
     if ((mixinRaw & (QNAN | SIGN_BIT)) != (QNAN | SIGN_BIT))
@@ -450,8 +450,8 @@ extern "C" void jit_mixin_helper(double target_val, double mixin_val)
 extern "C" double jit_get_super_helper(double receiver_val, double superclass_val, const char *name)
 {
     uint64_t recvRaw, supRaw;
-    memcpy(&recvRaw, &receiver_val, sizeof(uint64_t));
-    memcpy(&supRaw, &superclass_val, sizeof(uint64_t));
+    memcpy((void *)&recvRaw, &receiver_val, sizeof(uint64_t));
+    memcpy((void *)&supRaw, &superclass_val, sizeof(uint64_t));
     ObjClass *superclass = nullptr;
     if ((supRaw & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
     {
@@ -471,7 +471,7 @@ extern "C" double jit_get_super_helper(double receiver_val, double superclass_va
 
         VMValue result(bound);
         double ret;
-        memcpy(&ret, &result, sizeof(double));
+        memcpy((void *)&ret, &result, sizeof(double));
         return ret;
     }
     double ret = 0;
@@ -481,7 +481,7 @@ extern "C" double jit_get_super_helper(double receiver_val, double superclass_va
 extern "C" void jit_field_modifier_helper(double class_val, const char *name, int modifier)
 {
     uint64_t klassRaw;
-    memcpy(&klassRaw, &class_val, sizeof(uint64_t));
+    memcpy((void *)&klassRaw, &class_val, sizeof(uint64_t));
     if ((klassRaw & (QNAN | SIGN_BIT)) != (QNAN | SIGN_BIT))
         return;
     ObjClass *klass = (ObjClass *)(klassRaw & ~(QNAN | SIGN_BIT));
@@ -494,7 +494,7 @@ extern "C" double jit_create_closure_helper(void *vm_ptr, double func_val, doubl
 {
     VM *vm = static_cast<VM *>(vm_ptr);
     uint64_t funcRaw;
-    memcpy(&funcRaw, &func_val, sizeof(uint64_t));
+    memcpy((void *)&funcRaw, &func_val, sizeof(uint64_t));
     ObjFunction *function;
     if ((funcRaw & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
         function = (ObjFunction *)(funcRaw & ~(QNAN | SIGN_BIT));
@@ -505,7 +505,7 @@ extern "C" double jit_create_closure_helper(void *vm_ptr, double func_val, doubl
     for (int i = 0; i < upvalue_count; i++)
     {
         uint64_t metaRaw;
-        memcpy(&metaRaw, &upvalue_data[i * 2], sizeof(uint64_t));
+        memcpy((void *)&metaRaw, &upvalue_data[i * 2], sizeof(uint64_t));
         int packed = static_cast<int>(metaRaw);
         bool isLocal = (packed >> 8) & 1;
         int index = packed & 0xFF;
@@ -513,7 +513,7 @@ extern "C" double jit_create_closure_helper(void *vm_ptr, double func_val, doubl
         if (isLocal)
         {
             uint64_t addrRaw;
-            memcpy(&addrRaw, &upvalue_data[i * 2 + 1], sizeof(uint64_t));
+            memcpy((void *)&addrRaw, &upvalue_data[i * 2 + 1], sizeof(uint64_t));
             closure->upvalues.push_back(vm->captureUpvalue((VMValue *)addrRaw));
         }
         else
@@ -531,7 +531,7 @@ extern "C" double jit_create_closure_helper(void *vm_ptr, double func_val, doubl
 
     VMValue result(closure);
     double ret;
-    memcpy(&ret, &result, sizeof(double));
+    memcpy((void *)&ret, &result, sizeof(double));
     return ret;
 }
 
@@ -542,7 +542,7 @@ extern "C" double jit_get_upvalue_helper(void *vm_ptr, int slot)
     {
         VMValue result = *vm->jitClosure->upvalues[slot]->location;
         double ret;
-        memcpy(&ret, &result, sizeof(double));
+        memcpy((void *)&ret, &result, sizeof(double));
         return ret;
     }
     double ret = 0;
@@ -555,7 +555,7 @@ extern "C" void jit_set_upvalue_helper(void *vm_ptr, int slot, double val)
     if (vm->jitClosure && slot < (int)vm->jitClosure->upvalues.size() && vm->jitClosure->upvalues[slot])
     {
         VMValue value;
-        memcpy(&value, &val, sizeof(VMValue));
+        memcpy((void *)&value, &val, sizeof(VMValue));
         *vm->jitClosure->upvalues[slot]->location = value;
     }
 }
