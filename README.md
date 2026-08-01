@@ -56,7 +56,7 @@ Trypillia is built using CMake and a modern C++ compiler.
 
 ```bash
 # Clone the repository
-git clone https://github.com/ChernegaSergiy/trypillia-language.git
+git clone https://github.com/trypillia/trypillia-language.git
 cd trypillia-language
 
 # Build the compiler and LSP server
