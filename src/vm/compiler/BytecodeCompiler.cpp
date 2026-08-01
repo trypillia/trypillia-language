@@ -775,6 +775,13 @@ class CompilerVisitor : public ASTVisitor
             break;
         }
     }
+
+    void visit(ParenExprNode *node) override
+    {
+        currentLine = node->leftParen.line;
+        node->expr->accept(this);
+    }
+
     void visit(ThisExpr *node) override
     {
         for (int i = static_cast<int>(locals.size()) - 1; i >= 0; i--)
