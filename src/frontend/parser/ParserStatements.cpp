@@ -9,6 +9,7 @@ Parser::Parser(Lexer &lexer) : lexer(lexer) {
 }
 
 void Parser::advance() {
+    previousToken = currentToken;
     currentToken = lexer.nextToken();
 }
 
