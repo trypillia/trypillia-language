@@ -120,6 +120,11 @@ class SemanticVisitor : public ASTVisitor
         }
     }
 
+    void visit(ParenExprNode *node) override
+    {
+        node->expr->accept(this);
+    }
+
     void visit(UnaryExpr *node) override
     {
         if (node->op.type == TokenType::PLUS_PLUS || node->op.type == TokenType::MINUS_MINUS)
