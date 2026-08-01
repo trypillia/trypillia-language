@@ -5,6 +5,7 @@
 #include "frontend/semantic/SemanticAnalyzer.h"
 #include "vm/compiler/BytecodeCompiler.h"
 #include "vm/core/VM.h"
+#include "vm/coverage/LcovReporter.h"
 #include "vm/serializer/Serializer.h"
 #include <fstream>
 #include <iostream>
@@ -43,6 +44,7 @@ std::string getExecutablePath(const char *argv0) {
 }
 
 int main(int argc, char **argv) {
+    VM vm;
     std::string command;
     if (argc >= 2)
         command = argv[1];
@@ -57,35 +59,45 @@ int main(int argc, char **argv) {
         for (int i = 1; i < argc; i++) {
             StdLib::OSModule::commandLineArgs.push_back(argv[i]);
         }
-        VM vm;
         vm.interpret(function);
         return 0;
     }
 
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " [build] <file> [output]" << std::endl;
-        return 1;
-    }
-
     bool buildStandalone = false;
+    bool enableCoverage = false;
     std::string inputFile;
     std::string outputFile;
 
+    int argIdx = 1;
+    if (argIdx < argc && std::string(argv[argIdx]) == "--coverage") {
+        enableCoverage = true;
+        argIdx++;
+        if (argIdx < argc) {
+            command = argv[argIdx];
+        }
+    }
+
+    if (argIdx >= argc) {
+        std::cerr << "Usage: " << argv[0] << " [--coverage] [build] <file> [output]" << std::endl;
+        return 1;
+    }
+
     if (command == "build") {
-        if (argc < 3) {
+        argIdx++;
+        if (argIdx >= argc) {
             std::cerr << "Usage: " << argv[0] << " build <file.try> [output]" << std::endl;
             return 1;
         }
         buildStandalone = true;
-        inputFile = argv[2];
-        if (argc >= 4) {
-            outputFile = argv[3];
+        inputFile = argv[argIdx++];
+        if (argIdx < argc) {
+            outputFile = argv[argIdx];
         } else {
             outputFile = "app";
         }
     } else {
-        inputFile = argv[1];
-        for (int i = 2; i < argc; i++) {
+        inputFile = argv[argIdx++];
+        for (int i = argIdx; i < argc; i++) {
             StdLib::OSModule::commandLineArgs.push_back(argv[i]);
         }
     }
@@ -123,8 +135,15 @@ int main(int argc, char **argv) {
                 return 1;
             }
         } else {
-            VM vm;
+            if (enableCoverage) {
+                vm.collectCoverage = true;
+            }
             InterpretResult result = vm.interpret(function);
+            
+            if (enableCoverage) {
+                LcovReporter::generateReport(&vm, "coverage.info");
+            }
+            
             if (result == InterpretResult::INTERPRET_RUNTIME_ERROR) {
                 return 1;
             }
