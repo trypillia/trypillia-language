@@ -113,7 +113,7 @@ Trypillia comes with an official **VS Code extension**. To install and use it:
 
 ## Package Manager (TrypPM)
 
-Trypillia has a native package manager called **[TrypPM](https://github.com/ChernegaSergiy/tryppm)**. It allows you to initialize projects, manage dependencies, and even upgrade the language compiler natively.
+Trypillia has a native package manager called **[TrypPM](https://github.com/trypillia/tryppm)**. It allows you to initialize projects, manage dependencies, and even upgrade the language compiler natively.
 
 **Features of TrypPM:**
 - **`tryppm init`**: Generate a standard `tryp.json` manifest file for your project.
