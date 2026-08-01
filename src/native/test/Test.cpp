@@ -65,7 +65,7 @@ static void getSourceLocation(VM *vm, std::string &filename, int &line)
 
 static void failAssertion(VM *vm, const std::string &message)
 {
-    std::cerr << message << std::endl;
+    vm->globals["__test_current_error"] = VMValue(new ObjString(message));
     if (vm->catchJumpEnabled)
     {
         longjmp(vm->catchJmpBuf, 1);
@@ -112,6 +112,30 @@ static void trackTestResult(VM *vm, const std::string &testName, bool passed)
         resultsList = resultsIt->second.asList();
     }
     resultsList->elements.push_back(VMValue(passed));
+
+    auto errorsIt = vm->globals.find("__test_errors");
+    ObjList *errorsList;
+    if (errorsIt == vm->globals.end() || !errorsIt->second.isList())
+    {
+        errorsList = new ObjList({});
+        vm->globals["__test_errors"] = VMValue(errorsList);
+    }
+    else
+    {
+        errorsList = errorsIt->second.asList();
+    }
+
+    std::string errorMsg = "";
+    if (!passed)
+    {
+        auto curErrIt = vm->globals.find("__test_current_error");
+        if (curErrIt != vm->globals.end() && curErrIt->second.isString())
+        {
+            errorMsg = curErrIt->second.asString()->flatten();
+        }
+    }
+    vm->globals.erase("__test_current_error");
+    errorsList->elements.push_back(VMValue(new ObjString(errorMsg)));
 }
 
 static VMValue assertNative(int argCount, VMValue *args)

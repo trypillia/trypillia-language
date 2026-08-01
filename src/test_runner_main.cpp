@@ -110,7 +110,8 @@ static bool hasFocusedTests(const std::string &source)
     return source.find("fit(") != std::string::npos || source.find("fdescribe(") != std::string::npos;
 }
 
-static bool readTestResults(VM &vm, std::vector<std::string> &names, std::vector<bool> &results)
+static bool readTestResults(VM &vm, std::vector<std::string> &names, std::vector<bool> &results,
+                            std::vector<std::string> &errors)
 {
     auto namesIt = vm.globals.find("__test_names");
     auto resultsIt = vm.globals.find("__test_results");
@@ -119,8 +120,11 @@ static bool readTestResults(VM &vm, std::vector<std::string> &names, std::vector
     if (resultsIt == vm.globals.end() || !resultsIt->second.isList())
         return false;
 
+    auto errorsIt = vm.globals.find("__test_errors");
+    bool hasErrors = (errorsIt != vm.globals.end() && errorsIt->second.isList());
     auto namesList = namesIt->second.asList();
     auto resultsList = resultsIt->second.asList();
+    ObjList *errorsList = hasErrors ? errorsIt->second.asList() : nullptr;
 
     for (size_t i = 0; i < namesList->elements.size() && i < resultsList->elements.size(); i++)
     {
@@ -128,6 +132,14 @@ static bool readTestResults(VM &vm, std::vector<std::string> &names, std::vector
         {
             names.push_back(namesList->elements[i].asString()->flatten());
             results.push_back(resultsList->elements[i].isBool() ? resultsList->elements[i].asBool() : false);
+            if (errorsList && i < errorsList->elements.size() && errorsList->elements[i].isString())
+            {
+                errors.push_back(errorsList->elements[i].asString()->flatten());
+            }
+            else
+            {
+                errors.push_back("");
+            }
         }
     }
     return true;
@@ -264,7 +276,8 @@ int main(int argc, char **argv)
 
         std::vector<std::string> testNames;
         std::vector<bool> testResults;
-        bool hasFrameworkResults = readTestResults(vm, testNames, testResults);
+        std::vector<std::string> testErrors;
+        bool hasFrameworkResults = readTestResults(vm, testNames, testResults, testErrors);
 
         if (hasFrameworkResults && !testNames.empty())
         {
@@ -279,17 +292,21 @@ int main(int argc, char **argv)
                 else
                 {
                     std::cout << "not ok " << tapCounter << " \xe2\x80\x94 " << testNames[j] << std::endl;
-                    std::string errOutput = capturedErr.str();
-                    if (!errOutput.empty())
+                    if (j < testErrors.size() && !testErrors[j].empty())
                     {
-                        std::cout << "# " << errOutput;
-                        if (errOutput.back() != '\n')
-                            std::cout << std::endl;
+                        std::cout << "# " << testErrors[j] << std::endl;
                     }
                     totalFailed++;
                 }
             }
             totalTests += (int)testNames.size();
+            std::string remainingErr = capturedErr.str();
+            if (!remainingErr.empty())
+            {
+                std::cout << remainingErr;
+                if (remainingErr.back() != '\n')
+                    std::cout << std::endl;
+            }
         }
         else
         {
