@@ -191,14 +191,17 @@ void LoadStmt::accept(ASTVisitor *visitor)
 {
     visitor->visit(this);
 }
+
 void DictExpr::accept(ASTVisitor *visitor)
 {
     visitor->visit(this);
 }
+
 void UsingStmt::accept(ASTVisitor *visitor)
 {
     visitor->visit(this);
 }
+
 void LambdaExpr::accept(ASTVisitor *visitor)
 {
     visitor->visit(this);
