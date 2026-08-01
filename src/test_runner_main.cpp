@@ -226,6 +226,16 @@ int main(int argc, char **argv)
             continue;
         }
 
+        VM vm;
+        if (enableCoverage)
+        {
+            vm.collectCoverage = true;
+        }
+        if (hasFocusedTests(source))
+        {
+            vm.globals["__test_only"] = VMValue(true);
+        }
+
         Compiler compiler;
         compiler.currentFilename = path;
         ObjFunction *function = compiler.compile(ast, globals);
@@ -243,16 +253,6 @@ int main(int argc, char **argv)
         std::stringstream capturedErr;
         auto oldBufOut = std::cout.rdbuf(capturedOut.rdbuf());
         auto oldBufErr = std::cerr.rdbuf(capturedErr.rdbuf());
-
-        VM vm;
-        if (enableCoverage)
-        {
-            vm.collectCoverage = true;
-        }
-        if (hasFocusedTests(source))
-        {
-            vm.globals["__test_only"] = VMValue(true);
-        }
         InterpretResult result = vm.interpret(function);
         if (enableCoverage)
         {
