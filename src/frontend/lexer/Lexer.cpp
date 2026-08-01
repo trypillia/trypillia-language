@@ -49,32 +49,61 @@ Lexer::Lexer(const std::string &source, bool preserveTrivia)
 
 Token Lexer::nextToken()
 {
+    std::string currentLeadingTrivia = "";
+
     if (preserveTrivia)
     {
-        char p = peek();
-        if (p == ' ' || p == '\r' || p == '\t' || p == '\n')
+        while (true)
         {
-            size_t startIdx = currentIndex;
-            int startColumn = column;
-            int startLine = line;
-            while (peek() == ' ' || peek() == '\r' || peek() == '\t' || peek() == '\n')
+            char p = peek();
+            if (p == ' ' || p == '\r' || p == '\t' || p == '\n')
             {
-                if (peek() == '\n')
+                size_t startIdx = currentIndex;
+                while (peek() == ' ' || peek() == '\r' || peek() == '\t' || peek() == '\n')
                 {
-                    line++;
-                    column = 1;
-                    currentIndex++;
+                    if (peek() == '\n')
+                    {
+                        line++;
+                        column = 1;
+                        currentIndex++;
+                    }
+                    else
+                    {
+                        column++;
+                        currentIndex++;
+                    }
                 }
-                else
-                {
-                    column++;
-                    currentIndex++;
-                }
+                currentLeadingTrivia += source.substr(startIdx, currentIndex - startIdx);
             }
-            return {TokenType::WHITESPACE, source.substr(startIdx, currentIndex - startIdx), startLine, startColumn};
+            else if (p == '/' && peekNext() == '/')
+            {
+                size_t commentStart = currentIndex;
+                advance(); // '/'
+                advance(); // '/'
+                while (peek() != '\n' && !isAtEnd())
+                {
+                    advance();
+                }
+                currentLeadingTrivia += source.substr(commentStart, currentIndex - commentStart);
+            }
+            else
+            {
+                break;
+            }
         }
     }
-    else
+
+    Token t = nextTokenInternal();
+    if (preserveTrivia)
+    {
+        t.leadingTrivia = currentLeadingTrivia;
+    }
+    return t;
+}
+
+Token Lexer::nextTokenInternal()
+{
+    if (!preserveTrivia)
     {
         skipWhitespace();
     }
@@ -161,17 +190,11 @@ Token Lexer::nextToken()
         else if (match('/'))
         {
             // Comment extends to the end of the line
-            size_t commentStart = currentIndex - 2;
             while (peek() != '\n' && !isAtEnd())
             {
                 advance();
             }
-            if (preserveTrivia)
-            {
-                return {TokenType::COMMENT, source.substr(commentStart, currentIndex - commentStart), line,
-                        startColumn};
-            }
-            return nextToken();
+            return nextTokenInternal();
         }
         else
         {
