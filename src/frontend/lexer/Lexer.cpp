@@ -42,13 +42,42 @@ static std::unordered_map<std::string, TokenType> keywords = {{"class", TokenTyp
                                                               {"super", TokenType::SUPER},
                                                               {"static", TokenType::STATIC}};
 
-Lexer::Lexer(const std::string &source) : source(source), currentIndex(0), line(1), column(1)
+Lexer::Lexer(const std::string &source, bool preserveTrivia)
+    : source(source), currentIndex(0), line(1), column(1), preserveTrivia(preserveTrivia)
 {
 }
 
 Token Lexer::nextToken()
 {
-    skipWhitespace();
+    if (preserveTrivia)
+    {
+        char p = peek();
+        if (p == ' ' || p == '\r' || p == '\t' || p == '\n')
+        {
+            size_t startIdx = currentIndex;
+            int startColumn = column;
+            int startLine = line;
+            while (peek() == ' ' || peek() == '\r' || peek() == '\t' || peek() == '\n')
+            {
+                if (peek() == '\n')
+                {
+                    line++;
+                    column = 1;
+                    currentIndex++;
+                }
+                else
+                {
+                    column++;
+                    currentIndex++;
+                }
+            }
+            return {TokenType::WHITESPACE, source.substr(startIdx, currentIndex - startIdx), startLine, startColumn};
+        }
+    }
+    else
+    {
+        skipWhitespace();
+    }
 
     int startColumn = column;
 
@@ -132,9 +161,15 @@ Token Lexer::nextToken()
         else if (match('/'))
         {
             // Comment extends to the end of the line
+            size_t commentStart = currentIndex - 2;
             while (peek() != '\n' && !isAtEnd())
             {
                 advance();
+            }
+            if (preserveTrivia)
+            {
+                return {TokenType::COMMENT, source.substr(commentStart, currentIndex - commentStart), line,
+                        startColumn};
             }
             return nextToken();
         }
@@ -689,6 +724,10 @@ std::string tokenTypeToString(TokenType type)
         return "THIS";
     case TokenType::SUPER:
         return "SUPER";
+    case TokenType::COMMENT:
+        return "COMMENT";
+    case TokenType::WHITESPACE:
+        return "WHITESPACE";
     case TokenType::END_OF_FILE:
         return "END_OF_FILE";
     case TokenType::UNKNOWN:
