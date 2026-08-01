@@ -5,9 +5,9 @@
 #include "../symbol/SymbolTable.h"
 
 class SemanticAnalyzer {
-  public:
-    std::string currentFilename;
-    SymbolTable *analyze(ASTNode *ast);
+public:
+  std::string currentFilename;
+  SymbolTable *analyze(ASTNode *ast);
 };
 
 #endif // SEMANTIC_ANALYZER_H
