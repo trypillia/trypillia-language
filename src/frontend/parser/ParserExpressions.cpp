@@ -331,6 +331,7 @@ ExprNode *Parser::parseIdentifier(bool canAssign)
 
 ExprNode *Parser::parseGrouping(bool canAssign)
 {
+    Token leftParen = previousToken;
     // We are at LPAREN. Could be a normal grouping (expr), or an arrow lambda (a,
     // b) =>
     Lexer tempLexer = lexer;
@@ -417,8 +418,9 @@ ExprNode *Parser::parseGrouping(bool canAssign)
     }
 
     ExprNode *expr = expression();
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
-    return expr;
+    return new ParenExprNode(leftParen, expr, rightParen);
 }
 
 ExprNode *Parser::parseList(bool canAssign)
