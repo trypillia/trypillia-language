@@ -3,6 +3,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <malloc.h>
 #else
 #include <sys/mman.h>
 #endif
@@ -17,6 +18,7 @@ struct JmpBufHolder {
 static thread_local JmpBufHolder *stackOverflowJmpBuf = nullptr;
 static std::once_flag guardHandlerFlag;
 
+#ifndef _WIN32
 extern "C" void stackGuardHandler(int sig, siginfo_t *info, void *ctx) {
     (void)sig;
     (void)ctx;
@@ -44,6 +46,23 @@ static void installGuardHandler() {
         sigaction(SIGSEGV, &sa, nullptr);
     });
 }
+#else
+static LONG WINAPI windowsStackOverflowHandler(EXCEPTION_POINTERS *ExceptionInfo) {
+    if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW) {
+        if (stackOverflowJmpBuf) {
+            _resetstkoflw();
+            longjmp(stackOverflowJmpBuf->buf, 1);
+        }
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static void installGuardHandler() {
+    std::call_once(guardHandlerFlag, []() {
+        AddVectoredExceptionHandler(1, windowsStackOverflowHandler);
+    });
+}
+#endif
 
 #include "../memory/ObjectRuntime.h"
 #include <cmath>

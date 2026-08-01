@@ -65,5 +65,7 @@ endif()
 if(MSVC)
     target_compile_options(trypillia PRIVATE /wd4244 /wd4267)
     target_compile_definitions(trypillia PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(trypillia_core PRIVATE /wd4244 /wd4267)
+    target_compile_definitions(trypillia_core PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
