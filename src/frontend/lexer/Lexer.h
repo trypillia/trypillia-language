@@ -142,6 +142,7 @@ class Lexer
     Token number(int startColumn);
     Token string(int startColumn);
     Token scanToken();
+    Token nextTokenInternal();
 };
 
 #endif // LEXER_H
