@@ -143,6 +143,26 @@ class SetExpr : public ExprNode
     void accept(ASTVisitor *visitor) override;
 };
 
+class ParenExprNode : public ExprNode
+{
+  public:
+    Token leftParen;
+    ExprNode *expr;
+    Token rightParen;
+
+    ParenExprNode(Token leftParen, ExprNode *expr, Token rightParen)
+        : leftParen(leftParen), expr(expr), rightParen(rightParen)
+    {
+    }
+
+    ~ParenExprNode()
+    {
+        delete expr;
+    }
+
+    void accept(ASTVisitor *visitor) override;
+};
+
 class PostfixExpr : public ExprNode
 {
   public:
@@ -891,6 +911,7 @@ class ASTVisitor
     virtual void visit(UsingStmt *node) = 0;
     virtual void visit(LambdaExpr *node) = 0;
     virtual void visit(UnaryExpr *node) = 0;
+    virtual void visit(ParenExprNode *node) = 0;
     virtual void visit(ThisExpr *node) = 0;
     virtual void visit(SuperExpr *node) = 0;
     virtual void visit(GetExpr *node) = 0;
