@@ -470,6 +470,7 @@ VMValue VM::callClosure(VMValue closureVal, int argCount, VMValue *args)
 
     int initialFrameCount = static_cast<int>(frames.size());
 
+    VMValue *savedStackTop = stackTop;
     push(closureVal);
     for (int i = 0; i < argCount; i++)
     {
@@ -485,6 +486,11 @@ VMValue VM::callClosure(VMValue closureVal, int argCount, VMValue *args)
     InterpretResult result = run(initialFrameCount);
     if (result == InterpretResult::INTERPRET_RUNTIME_ERROR)
     {
+        while (frames.size() > static_cast<size_t>(initialFrameCount))
+        {
+            frames.pop_back();
+        }
+        stackTop = savedStackTop;
         return nullptr;
     }
 
