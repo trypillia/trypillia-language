@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -118,6 +119,12 @@ int main(int argc, char **argv)
         {
             StdLib::OSModule::commandLineArgs.push_back(argv[i]);
         }
+    }
+
+    if (std::filesystem::is_directory(inputFile))
+    {
+        std::cerr << "Error: " << inputFile << " is a directory. Please provide a source file." << std::endl;
+        return 1;
     }
 
     std::ifstream sourceFile(inputFile);
