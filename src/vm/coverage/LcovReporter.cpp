@@ -7,11 +7,8 @@
 
 #include "../compiler/Chunk.h"
 
-void LcovReporter::generateReport(VM *vm, const std::string &outputPath)
+void LcovReporter::collectCoverage(VM *vm, std::map<std::string, std::map<int, uint32_t>> &fileCoverage)
 {
-    // Map of filename -> (line number -> execution count)
-    std::map<std::string, std::map<int, uint32_t>> fileCoverage;
-
     // Traverse all objects in the VM to find ObjFunctions
     for (Obj *o = vm->objects; o != nullptr; o = o->nextObj)
     {
@@ -36,8 +33,7 @@ void LcovReporter::generateReport(VM *vm, const std::string &outputPath)
                     int line = chunk->lines[i];
                     uint32_t hits = chunk->coverage[i];
 
-                    // The line execution count is the maximum of any instruction on that
-                    // line
+                    // The line execution count is the maximum of any instruction on that line
                     if (hits > lineMap[line])
                     {
                         lineMap[line] = hits;
@@ -46,7 +42,11 @@ void LcovReporter::generateReport(VM *vm, const std::string &outputPath)
             }
         }
     }
+}
 
+void LcovReporter::writeReport(const std::map<std::string, std::map<int, uint32_t>> &fileCoverage,
+                               const std::string &outputPath)
+{
     std::ofstream out(outputPath);
     if (!out.is_open())
     {
@@ -89,4 +89,11 @@ void LcovReporter::generateReport(VM *vm, const std::string &outputPath)
 
     out.close();
     std::cout << "LCOV coverage report generated at: " << outputPath << std::endl;
+}
+
+void LcovReporter::generateReport(VM *vm, const std::string &outputPath)
+{
+    std::map<std::string, std::map<int, uint32_t>> fileCoverage;
+    collectCoverage(vm, fileCoverage);
+    writeReport(fileCoverage, outputPath);
 }
