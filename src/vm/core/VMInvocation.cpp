@@ -264,7 +264,7 @@ bool VM::executeCall(uint8_t argCount)
             {
                 VMValue arg = peek(argCount - i);
                 double raw;
-                memcpy(&raw, &arg, sizeof(double));
+                memcpy((void *)&raw, &arg, sizeof(double));
                 jitArgs[i] = raw;
             }
 
@@ -274,7 +274,7 @@ bool VM::executeCall(uint8_t argCount)
             for (int i = 1; i <= argCount; i++)
             {
                 VMValue val;
-                memcpy(&val, &jitArgs[i], sizeof(double));
+                memcpy((void *)&val, &jitArgs[i], sizeof(double));
                 if (!val.isNumber())
                 {
                     allNumbers = false;
