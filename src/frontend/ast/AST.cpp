@@ -216,3 +216,8 @@ void UseStmt::accept(ASTVisitor *visitor)
 {
     visitor->visit(this);
 }
+
+void ParenExprNode::accept(ASTVisitor *visitor)
+{
+    visitor->visit(this);
+}
