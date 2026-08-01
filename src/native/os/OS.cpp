@@ -58,9 +58,19 @@ static VMValue osExec(int argCount, VMValue *args)
 
     while (fgets(buffer.data(), buffer.size(), pipe))
         result += buffer.data();
-    PCLOSE(pipe);
+    int retCode = PCLOSE(pipe);
 
-    return makeResultOk(currentVM, result);
+#ifdef _WIN32
+    if (retCode == 0)
+        return makeResultOk(currentVM, result);
+    else
+        return makeResultErr(currentVM, result);
+#else
+    if (WIFEXITED(retCode) && WEXITSTATUS(retCode) == 0)
+        return makeResultOk(currentVM, result);
+    else
+        return makeResultErr(currentVM, result);
+#endif
 }
 
 static VMValue osExit(int argCount, VMValue *args)
