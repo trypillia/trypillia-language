@@ -154,6 +154,7 @@ int main(int argc, char **argv)
     }
 
     std::string filter;
+    std::string coverageDir;
     bool enableCoverage = false;
     int argStart = 1;
 
@@ -168,6 +169,12 @@ int main(int argc, char **argv)
         {
             enableCoverage = true;
             argStart += 1;
+        }
+        else if (strcmp(argv[argStart], "--coverage-dir") == 0 && argStart + 1 < argc)
+        {
+            coverageDir = argv[argStart + 1];
+            enableCoverage = true;
+            argStart += 2;
         }
         else
         {
@@ -358,6 +365,55 @@ int main(int argc, char **argv)
         std::cout << "1.." << tapCounter << std::endl;
         std::cout << "# " << totalTests << " tests, " << totalPassed << " passed, " << totalFailed << " failed"
                   << std::endl;
+    }
+
+    if (enableCoverage && !coverageDir.empty())
+    {
+        for (const auto &entry : fs::recursive_directory_iterator(coverageDir))
+        {
+            if (entry.is_regular_file() && entry.path().extension() == ".try")
+            {
+                std::string pathStr = entry.path().string();
+
+                // globalCoverage stores paths as resolved during test execution,
+                // but since tests load relative files, the paths in globalCoverage
+                // are usually the ones returned by the OS/filesystem.
+                // If it's not present, we add it.
+                if (globalCoverage.find(pathStr) == globalCoverage.end() &&
+                    globalCoverage.find(fs::absolute(pathStr).string()) == globalCoverage.end())
+                {
+                    std::ifstream sourceFile(pathStr);
+                    if (sourceFile.is_open())
+                    {
+                        std::string source((std::istreambuf_iterator<char>(sourceFile)),
+                                           std::istreambuf_iterator<char>());
+                        Lexer lexer(source);
+                        Parser parser(lexer);
+                        ASTNode *ast = parser.parse();
+                        if (ast)
+                        {
+                            ASTOptimizer::optimize(ast);
+                            SemanticAnalyzer semanticAnalyzer;
+                            semanticAnalyzer.currentFilename = pathStr;
+                            SymbolTable *globals = semanticAnalyzer.analyze(ast);
+                            if (globals)
+                            {
+                                VM vm;
+                                vm.collectCoverage = true;
+                                Compiler compiler;
+                                compiler.currentFilename = pathStr;
+                                ObjFunction *function = compiler.compile(ast, globals);
+                                delete globals;
+                                if (function)
+                                {
+                                    LcovReporter::collectCoverage(&vm, globalCoverage);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (enableCoverage && !globalCoverage.empty())
