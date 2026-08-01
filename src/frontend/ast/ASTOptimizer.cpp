@@ -151,6 +151,10 @@ ExprNode *ASTOptimizer::optimizeExpr(ExprNode *expr)
         }
         return binExpr;
     }
+    else if (auto parenExpr = dynamic_cast<ParenExprNode *>(expr))
+    {
+        parenExpr->expr = optimizeExpr(parenExpr->expr);
+    }
     else if (auto unExpr = dynamic_cast<UnaryExpr *>(expr))
     {
         unExpr->right = optimizeExpr(unExpr->right);
