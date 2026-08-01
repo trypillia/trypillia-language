@@ -97,6 +97,10 @@ enum class TokenType
     NAMESPACE,
     USE,
 
+    // Trivia
+    COMMENT,
+    WHITESPACE,
+
     // Special
     END_OF_FILE,
     UNKNOWN
@@ -115,7 +119,7 @@ struct Token
 class Lexer
 {
   public:
-    Lexer(const std::string &source);
+    Lexer(const std::string &source, bool preserveTrivia = false);
     Token nextToken();
 
   private:
@@ -123,6 +127,7 @@ class Lexer
     size_t currentIndex;
     int line;
     int column;
+    bool preserveTrivia;
 
     char advance();
     bool match(char expected);
