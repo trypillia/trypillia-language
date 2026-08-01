@@ -114,6 +114,8 @@ struct Token
     std::string lexeme;
     int line;
     int column;
+    std::string leadingTrivia = "";
+    std::string trailingTrivia = "";
 };
 
 class Lexer
