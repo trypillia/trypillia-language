@@ -300,6 +300,21 @@ int main(int argc, char **argv)
                 }
             }
             totalTests += (int)testNames.size();
+
+            if (result != InterpretResult::INTERPRET_OK)
+            {
+                tapCounter++;
+                totalFailed++;
+                totalTests++;
+                std::cout << "not ok " << tapCounter << " \xe2\x80\x94 " << path << " (runtime error after some tests)"
+                          << std::endl;
+                auto errIt = vm.globals.find("__test_current_error");
+                if (errIt != vm.globals.end() && errIt->second.isString())
+                {
+                    std::cout << "# " << errIt->second.asString()->flatten() << std::endl;
+                }
+            }
+
             std::string remainingErr = capturedErr.str();
             if (!remainingErr.empty())
             {
@@ -322,6 +337,11 @@ int main(int argc, char **argv)
                 tapCounter++;
                 totalFailed++;
                 std::cout << "not ok " << tapCounter << " \xe2\x80\x94 " << path << std::endl;
+                auto errIt = vm.globals.find("__test_current_error");
+                if (errIt != vm.globals.end() && errIt->second.isString())
+                {
+                    std::cout << "# " << errIt->second.asString()->flatten() << std::endl;
+                }
                 std::string errOutput = capturedErr.str();
                 if (!errOutput.empty())
                 {

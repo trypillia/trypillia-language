@@ -308,18 +308,34 @@ bool VM::executeCall(uint8_t argCount)
                          std::to_string(argCount) + ".");
             return false;
         }
+        jmp_buf prevAssertJmpBuf;
+        bool prevAssertJumpEnabled = assertJumpEnabled;
+        if (prevAssertJumpEnabled)
+        {
+            memcpy(prevAssertJmpBuf, assertJmpBuf, sizeof(jmp_buf));
+        }
+
         if (setjmp(assertJmpBuf) == 0)
         {
             assertJumpEnabled = true;
             VMValue result = native->function(argCount, stack + (stackTop - stack) - argCount);
-            assertJumpEnabled = false;
+
+            assertJumpEnabled = prevAssertJumpEnabled;
+            if (prevAssertJumpEnabled)
+            {
+                memcpy(assertJmpBuf, prevAssertJmpBuf, sizeof(jmp_buf));
+            }
+
             stackTop -= argCount + 1;
             push(result);
         }
         else
         {
-            assertJumpEnabled = false;
-            resetStack();
+            assertJumpEnabled = prevAssertJumpEnabled;
+            if (prevAssertJumpEnabled)
+            {
+                memcpy(assertJmpBuf, prevAssertJmpBuf, sizeof(jmp_buf));
+            }
             return false;
         }
     }

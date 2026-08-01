@@ -421,6 +421,18 @@ static VMValue describeNative(int argCount, VMValue *args)
 
     vm->callClosure(args[1], 0, nullptr);
 
+    auto errIt = vm->globals.find("__test_current_error");
+    if (errIt != vm->globals.end() && !errIt->second.isNil())
+    {
+        std::string msg = "Assertion failed outside of 'it' block";
+        if (errIt->second.isString())
+        {
+            msg = errIt->second.asString()->flatten();
+        }
+        failAssertion(vm, msg);
+        return nullptr;
+    }
+
     runCallbacks(vm, "__test_after");
 
     vm->globals["__test_before"] = VMValue(new ObjList({}));
