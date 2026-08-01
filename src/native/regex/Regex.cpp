@@ -1,10 +1,11 @@
 #include "Regex.h"
+
 #include <regex>
 
 namespace StdLib {
 namespace RegexModule {
 
-static VMValue regexTest(int argCount, VMValue *args) {
+static VMValue regexTest(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString()) {
     return nullptr;
   }
@@ -14,12 +15,12 @@ static VMValue regexTest(int argCount, VMValue *args) {
   try {
     std::regex re(pattern);
     return std::regex_search(text, re);
-  } catch (const std::regex_error &) {
+  } catch (const std::regex_error&) {
     return nullptr;
   }
 }
 
-static VMValue regexMatch(int argCount, VMValue *args) {
+static VMValue regexMatch(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString()) {
     return nullptr;
   }
@@ -36,13 +37,13 @@ static VMValue regexMatch(int argCount, VMValue *args) {
       }
       return new ObjList(results);
     }
-  } catch (const std::regex_error &) {
+  } catch (const std::regex_error&) {
     return nullptr;
   }
   return nullptr;
 }
 
-static VMValue regexReplace(int argCount, VMValue *args) {
+static VMValue regexReplace(int argCount, VMValue* args) {
   if (argCount != 3 || !args[0].isString() || !args[1].isString() ||
       !args[2].isString()) {
     return nullptr;
@@ -54,12 +55,12 @@ static VMValue regexReplace(int argCount, VMValue *args) {
   try {
     std::regex re(pattern);
     return std::regex_replace(text, re, replacement);
-  } catch (const std::regex_error &) {
+  } catch (const std::regex_error&) {
     return nullptr;
   }
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto regexClass = new ObjClass("Regex");
 
@@ -70,7 +71,7 @@ void registerAll(VM *vm) {
   vm->globals["Regex"] = regexClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Regex";
   sym.type = "class";
@@ -78,5 +79,5 @@ void registerSymbols(SymbolTable *scope) {
   scope->define(sym);
 }
 
-} // namespace RegexModule
-} // namespace StdLib
+}  // namespace RegexModule
+}  // namespace StdLib

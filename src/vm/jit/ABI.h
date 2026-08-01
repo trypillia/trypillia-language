@@ -1,7 +1,8 @@
 #pragma once
+#include <cstddef>
+
 #include "../compiler/Chunk.h"
 #include "../compiler/Value.h"
-#include <cstddef>
 
 // ============================================================
 // ABI constants for JIT compiler

@@ -1,4 +1,5 @@
 #include "Value.h"
+
 #include <string>
 
 // To support ObjString instantiation, we might need a full definition of
@@ -8,13 +9,13 @@
 // include "VM.h" which has ObjString.
 #include "../core/VM.h"
 
-VMValue::VMValue(const std::string &s) {
-  Obj *obj = new ObjString(s);
+VMValue::VMValue(const std::string& s) {
+  Obj* obj = new ObjString(s);
   val = SIGN_BIT | QNAN | (uint64_t)(uintptr_t)obj;
 }
 
-VMValue::VMValue(const char *s) {
-  Obj *obj = new ObjString(std::string(s));
+VMValue::VMValue(const char* s) {
+  Obj* obj = new ObjString(std::string(s));
   val = SIGN_BIT | QNAN | (uint64_t)(uintptr_t)obj;
 }
 
@@ -22,7 +23,7 @@ Obj::Obj(ObjType type) : type(type), isMarked(false), nextObj(nullptr) {
   if (currentVM) {
     this->nextObj = currentVM->objects;
     currentVM->objects = this;
-    currentVM->bytesAllocated += 256; // heuristic
+    currentVM->bytesAllocated += 256;  // heuristic
   }
 }
 
@@ -30,10 +31,8 @@ std::string VMValue::toString(bool inContainer) const {
   if (this->isNumber()) {
     std::string s = std::to_string(this->asNumber());
     s.erase(s.find_last_not_of('0') + 1, std::string::npos);
-    if (s.back() == '.')
-      s.pop_back();
-    if (s.empty())
-      return "0";
+    if (s.back() == '.') s.pop_back();
+    if (s.empty()) return "0";
     return s;
   } else if (this->isString()) {
     if (inContainer) {
@@ -48,8 +47,7 @@ std::string VMValue::toString(bool inContainer) const {
     auto list = this->asList();
     for (size_t i = 0; i < list->elements.size(); ++i) {
       s += list->elements[i].toString(true);
-      if (i < list->elements.size() - 1)
-        s += ", ";
+      if (i < list->elements.size() - 1) s += ", ";
     }
     s += "]";
     return s;
@@ -57,10 +55,9 @@ std::string VMValue::toString(bool inContainer) const {
     std::string s = "{";
     auto map = this->asMap();
     size_t i = 0;
-    for (auto const &[k, v] : map->values) {
+    for (auto const& [k, v] : map->values) {
       s += k.toString(true) + ": " + v.toString(true);
-      if (i < map->values.size() - 1)
-        s += ", ";
+      if (i < map->values.size() - 1) s += ", ";
       i++;
     }
     s += "}";
@@ -96,7 +93,7 @@ std::string VMValue::toString(bool inContainer) const {
   return "<unknown>";
 }
 
-bool VMValue::equalsImpl(const VMValue &other) const {
+bool VMValue::equalsImpl(const VMValue& other) const {
   if (isString() && other.isString()) {
     return asString()->flatten() == other.asString()->flatten();
   }

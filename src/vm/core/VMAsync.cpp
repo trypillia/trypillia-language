@@ -1,8 +1,9 @@
-#include "../memory/ObjectRuntime.h"
-#include "VM.h"
 #include <cmath>
 #include <iostream>
 #include <map>
+
+#include "../memory/ObjectRuntime.h"
+#include "VM.h"
 
 void VM::drainMicrotasks() {
   while (!microtaskQueue.empty() || !promiseMicrotasks.empty()) {

@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace PromiseModule {
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace PromiseModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace PromiseModule
+}  // namespace StdLib
 
 #endif

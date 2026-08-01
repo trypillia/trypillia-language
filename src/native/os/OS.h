@@ -7,9 +7,9 @@
 namespace StdLib {
 namespace OSModule {
 extern std::vector<std::string> commandLineArgs;
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace OSModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace OSModule
+}  // namespace StdLib
 
 #endif

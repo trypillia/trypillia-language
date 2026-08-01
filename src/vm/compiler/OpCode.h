@@ -63,4 +63,4 @@ enum class OpCode : uint8_t {
   OP_BIT_SHIFT_RIGHT
 };
 
-#endif // TRYPILLIA_OPCODE_H
+#endif  // TRYPILLIA_OPCODE_H

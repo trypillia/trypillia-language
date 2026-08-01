@@ -1,9 +1,3 @@
-#include "frontend/ast/ASTOptimizer.h"
-#include "frontend/lexer/Lexer.h"
-#include "frontend/parser/Parser.h"
-#include "frontend/semantic/SemanticAnalyzer.h"
-#include "vm/compiler/BytecodeCompiler.h"
-#include "vm/core/VM.h"
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -13,16 +7,22 @@
 #include <string>
 #include <vector>
 
+#include "frontend/ast/ASTOptimizer.h"
+#include "frontend/lexer/Lexer.h"
+#include "frontend/parser/Parser.h"
+#include "frontend/semantic/SemanticAnalyzer.h"
+#include "vm/compiler/BytecodeCompiler.h"
+#include "vm/core/VM.h"
+
 namespace fs = std::filesystem;
 
-static std::vector<std::string>
-expandGlobs(const std::vector<std::string> &patterns) {
+static std::vector<std::string> expandGlobs(
+    const std::vector<std::string>& patterns) {
   std::vector<std::string> files;
 
-  auto addFile = [&](const fs::path &path) {
+  auto addFile = [&](const fs::path& path) {
     std::error_code ec;
-    if (!fs::is_regular_file(path, ec))
-      return;
+    if (!fs::is_regular_file(path, ec)) return;
 
     std::string p = path.lexically_normal().string();
 
@@ -30,14 +30,13 @@ expandGlobs(const std::vector<std::string> &patterns) {
       files.push_back(p);
   };
 
-  for (const auto &pattern : patterns) {
+  for (const auto& pattern : patterns) {
     std::error_code ec;
     fs::path p(pattern);
 
     if (fs::is_directory(p, ec)) {
-      for (const auto &entry : fs::recursive_directory_iterator(p, ec)) {
-        if (!ec && entry.path().extension() == ".try")
-          addFile(entry.path());
+      for (const auto& entry : fs::recursive_directory_iterator(p, ec)) {
+        if (!ec && entry.path().extension() == ".try") addFile(entry.path());
       }
       continue;
     }
@@ -46,28 +45,23 @@ expandGlobs(const std::vector<std::string> &patterns) {
       size_t pos = pattern.find("**");
 
       fs::path base = pattern.substr(0, pos);
-      if (base.empty())
-        base = ".";
+      if (base.empty()) base = ".";
 
       std::string suffix = pattern.substr(pos + 2);
 
-      if (suffix.starts_with('/'))
-        suffix.erase(0, 1);
+      if (suffix.starts_with('/')) suffix.erase(0, 1);
 
       if (fs::is_directory(base, ec)) {
-        for (const auto &entry : fs::recursive_directory_iterator(base, ec)) {
-          if (ec || !entry.is_regular_file())
-            continue;
+        for (const auto& entry : fs::recursive_directory_iterator(base, ec)) {
+          if (ec || !entry.is_regular_file()) continue;
 
           auto rel = fs::relative(entry.path(), base, ec);
-          if (ec)
-            continue;
+          if (ec) continue;
 
           std::string relPath = rel.generic_string();
 
           if (suffix == "*.try") {
-            if (entry.path().extension() == ".try")
-              addFile(entry.path());
+            if (entry.path().extension() == ".try") addFile(entry.path());
           } else if (relPath.ends_with(suffix)) {
             addFile(entry.path());
           }
@@ -87,24 +81,22 @@ expandGlobs(const std::vector<std::string> &patterns) {
   return files;
 }
 
-static bool pathMatchesFilter(const std::string &path,
-                              const std::string &filter) {
-  if (filter.empty())
-    return true;
+static bool pathMatchesFilter(const std::string& path,
+                              const std::string& filter) {
+  if (filter.empty()) return true;
   return path.find(filter) != std::string::npos;
 }
 
-static bool hasFocusedTests(const std::string &source) {
+static bool hasFocusedTests(const std::string& source) {
   return source.find("fit(") != std::string::npos ||
          source.find("fdescribe(") != std::string::npos;
 }
 
-static bool readTestResults(VM &vm, std::vector<std::string> &names,
-                            std::vector<bool> &results) {
+static bool readTestResults(VM& vm, std::vector<std::string>& names,
+                            std::vector<bool>& results) {
   auto namesIt = vm.globals.find("__test_names");
   auto resultsIt = vm.globals.find("__test_results");
-  if (namesIt == vm.globals.end() || !namesIt->second.isList())
-    return false;
+  if (namesIt == vm.globals.end() || !namesIt->second.isList()) return false;
   if (resultsIt == vm.globals.end() || !resultsIt->second.isList())
     return false;
 
@@ -124,7 +116,7 @@ static bool readTestResults(VM &vm, std::vector<std::string> &names,
   return true;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0]
               << " [--filter <pattern>] <test-file> [test-file...]"
@@ -178,7 +170,7 @@ int main(int argc, char **argv) {
 
     Lexer lexer(source);
     Parser parser(lexer);
-    ASTNode *ast = parser.parse();
+    ASTNode* ast = parser.parse();
     if (!ast) {
       std::cout << "not ok " << (++tapCounter) << " \xe2\x80\x94 " << path
                 << std::endl;
@@ -191,7 +183,7 @@ int main(int argc, char **argv) {
 
     SemanticAnalyzer semanticAnalyzer;
     semanticAnalyzer.currentFilename = path;
-    SymbolTable *globals = semanticAnalyzer.analyze(ast);
+    SymbolTable* globals = semanticAnalyzer.analyze(ast);
     if (!globals) {
       std::cout << "not ok " << (++tapCounter) << " \xe2\x80\x94 " << path
                 << std::endl;
@@ -202,7 +194,7 @@ int main(int argc, char **argv) {
 
     Compiler compiler;
     compiler.currentFilename = path;
-    ObjFunction *function = compiler.compile(ast, globals);
+    ObjFunction* function = compiler.compile(ast, globals);
     delete globals;
 
     if (!function) {
@@ -244,8 +236,7 @@ int main(int argc, char **argv) {
           std::string errOutput = capturedErr.str();
           if (!errOutput.empty()) {
             std::cout << "# " << errOutput;
-            if (errOutput.back() != '\n')
-              std::cout << std::endl;
+            if (errOutput.back() != '\n') std::cout << std::endl;
           }
           totalFailed++;
         }
@@ -266,8 +257,7 @@ int main(int argc, char **argv) {
         std::string errOutput = capturedErr.str();
         if (!errOutput.empty()) {
           std::cout << "# " << errOutput;
-          if (errOutput.back() != '\n')
-            std::cout << std::endl;
+          if (errOutput.back() != '\n') std::cout << std::endl;
         }
       }
     }

@@ -1,4 +1,5 @@
 #include "Json.h"
+
 #include <cctype>
 #include <iostream>
 #include <sstream>
@@ -8,12 +9,10 @@
 namespace StdLib {
 namespace Json {
 
-static std::string stringifyValue(const VMValue &val, int indent = -1,
+static std::string stringifyValue(const VMValue& val, int indent = -1,
                                   int currentIndent = 0) {
-  if (val.isNil())
-    return "null";
-  if (val.isBool())
-    return val.asBool() ? "true" : "false";
+  if (val.isNil()) return "null";
+  if (val.isBool()) return val.asBool() ? "true" : "false";
   if (val.isNumber()) {
     double d = val.asNumber();
     if (d == static_cast<double>(static_cast<long long>(d))) {
@@ -53,8 +52,7 @@ static std::string stringifyValue(const VMValue &val, int indent = -1,
 
   if (val.isList()) {
     auto list = val.asList();
-    if (list->elements.empty())
-      return "[]";
+    if (list->elements.empty()) return "[]";
 
     std::string res = "[" + nl;
     int nextIndent = (indent >= 0) ? currentIndent + indent : 0;
@@ -74,8 +72,7 @@ static std::string stringifyValue(const VMValue &val, int indent = -1,
   }
   if (val.isMap()) {
     auto map = val.asMap();
-    if (map->values.empty())
-      return "{}";
+    if (map->values.empty()) return "{}";
 
     std::string res = "{" + nl;
     int nextIndent = (indent >= 0) ? currentIndent + indent : 0;
@@ -84,9 +81,8 @@ static std::string stringifyValue(const VMValue &val, int indent = -1,
         (indent >= 0) ? std::string(currentIndent, ' ') : "";
 
     bool first = true;
-    for (auto const &[k, v] : map->values) {
-      if (!first)
-        res += "," + nl;
+    for (auto const& [k, v] : map->values) {
+      if (!first) res += "," + nl;
       first = false;
 
       res += indentStr;
@@ -113,12 +109,11 @@ static std::string stringifyValue(const VMValue &val, int indent = -1,
     res += nl + endIndentStr + "}";
     return res;
   }
-  return "null"; // Default fallback
+  return "null";  // Default fallback
 }
 
-static VMValue jsonStringify(int argCount, VMValue *args) {
-  if (argCount < 1 || argCount > 2)
-    return nullptr;
+static VMValue jsonStringify(int argCount, VMValue* args) {
+  if (argCount < 1 || argCount > 2) return nullptr;
   int indent = -1;
   if (argCount == 2 && args[1].isNumber()) {
     indent = static_cast<int>(args[1].asNumber());
@@ -128,17 +123,16 @@ static VMValue jsonStringify(int argCount, VMValue *args) {
 
 // Simple JSON Parser
 class JsonParser {
-  const std::string &src;
+  const std::string& src;
   size_t pos = 0;
   const int MAX_DEPTH = 512;
 
   void skipWhitespace() {
-    while (pos < src.length() && std::isspace(src[pos]))
-      pos++;
+    while (pos < src.length() && std::isspace(src[pos])) pos++;
   }
 
   VMValue parseString() {
-    pos++; // skip "
+    pos++;  // skip "
     std::string res;
     while (pos < src.length() && src[pos] != '"') {
       if (src[pos] == '\\' && pos + 1 < src.length()) {
@@ -201,8 +195,7 @@ class JsonParser {
       }
       pos++;
     }
-    if (pos < src.length())
-      pos++; // skip "
+    if (pos < src.length()) pos++;  // skip "
     return res;
   }
 
@@ -222,9 +215,8 @@ class JsonParser {
   }
 
   VMValue parseArray(int depth) {
-    if (depth > MAX_DEPTH)
-      return nullptr;
-    pos++; // skip [
+    if (depth > MAX_DEPTH) return nullptr;
+    pos++;  // skip [
     skipWhitespace();
     std::vector<VMValue> elements;
     if (pos < src.length() && src[pos] == ']') {
@@ -241,16 +233,15 @@ class JsonParser {
         pos++;
         break;
       } else {
-        break; // Unexpected character
+        break;  // Unexpected character
       }
     }
     return new ObjList(elements);
   }
 
   VMValue parseObject(int depth) {
-    if (depth > MAX_DEPTH)
-      return nullptr;
-    pos++; // skip {
+    if (depth > MAX_DEPTH) return nullptr;
+    pos++;  // skip {
     skipWhitespace();
     auto map = new ObjMap();
     if (pos < src.length() && src[pos] == '}') {
@@ -259,12 +250,10 @@ class JsonParser {
     }
     while (pos < src.length()) {
       skipWhitespace();
-      if (src[pos] != '"')
-        break;
+      if (src[pos] != '"') break;
       VMValue key = parseString();
       skipWhitespace();
-      if (src[pos] != ':')
-        break;
+      if (src[pos] != ':') break;
       pos++;
       skipWhitespace();
       VMValue value = parseValue(depth + 1);
@@ -282,24 +271,18 @@ class JsonParser {
     return map;
   }
 
-public:
-  JsonParser(const std::string &src) : src(src) {}
+ public:
+  JsonParser(const std::string& src) : src(src) {}
 
   VMValue parseValue(int depth = 0) {
-    if (depth > MAX_DEPTH)
-      return nullptr;
+    if (depth > MAX_DEPTH) return nullptr;
     skipWhitespace();
-    if (pos >= src.length())
-      return nullptr;
+    if (pos >= src.length()) return nullptr;
     char c = src[pos];
-    if (c == '"')
-      return parseString();
-    if (c == '[')
-      return parseArray(depth);
-    if (c == '{')
-      return parseObject(depth);
-    if (std::isdigit(c) || c == '-')
-      return parseNumber();
+    if (c == '"') return parseString();
+    if (c == '[') return parseArray(depth);
+    if (c == '{') return parseObject(depth);
+    if (std::isdigit(c) || c == '-') return parseNumber();
     if (src.compare(pos, 4, "true") == 0) {
       pos += 4;
       return true;
@@ -316,15 +299,14 @@ public:
   }
 };
 
-static VMValue jsonParse(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue jsonParse(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string jsonStr = args[0].asString()->flatten();
   JsonParser parser(jsonStr);
   return parser.parseValue();
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   auto jsonClass = new ObjClass("Json");
   jsonClass->statics["stringify"] =
       new ObjNative("stringify", -1, jsonStringify);
@@ -332,12 +314,12 @@ void registerAll(VM *vm) {
   vm->globals["Json"] = jsonClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Json";
   sym.type = "class";
   sym.isConst = true;
   scope->define(sym);
 }
-} // namespace Json
-} // namespace StdLib
+}  // namespace Json
+}  // namespace StdLib

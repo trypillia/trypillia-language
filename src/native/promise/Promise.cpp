@@ -1,19 +1,17 @@
 #include "Promise.h"
+
 #include <csignal>
 
 namespace StdLib {
 namespace PromiseModule {
 
-static VMValue resolveNative(int argCount, VMValue *args) {
-  if (argCount < 1)
-    return nullptr;
-  VM *vm = currentVM;
+static VMValue resolveNative(int argCount, VMValue* args) {
+  if (argCount < 1) return nullptr;
+  VM* vm = currentVM;
   auto it = vm->globals.find("__promise_pending");
-  if (it == vm->globals.end() || !it->second.isPromise())
-    return nullptr;
-  ObjPromise *promise = it->second.asPromise();
-  if (promise->resolved)
-    return nullptr;
+  if (it == vm->globals.end() || !it->second.isPromise()) return nullptr;
+  ObjPromise* promise = it->second.asPromise();
+  if (promise->resolved) return nullptr;
   promise->value = args[0];
   promise->resolved = true;
   vm->globals.erase("__promise_pending");
@@ -33,16 +31,13 @@ static VMValue resolveNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue rejectNative(int argCount, VMValue *args) {
-  if (argCount < 1)
-    return nullptr;
-  VM *vm = currentVM;
+static VMValue rejectNative(int argCount, VMValue* args) {
+  if (argCount < 1) return nullptr;
+  VM* vm = currentVM;
   auto it = vm->globals.find("__promise_pending");
-  if (it == vm->globals.end() || !it->second.isPromise())
-    return nullptr;
-  ObjPromise *promise = it->second.asPromise();
-  if (promise->resolved)
-    return nullptr;
+  if (it == vm->globals.end() || !it->second.isPromise()) return nullptr;
+  ObjPromise* promise = it->second.asPromise();
+  if (promise->resolved) return nullptr;
   promise->value = args[0];
   promise->resolved = true;
   vm->globals.erase("__promise_pending");
@@ -65,19 +60,18 @@ static VMValue rejectNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue thenNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
-  ObjPromise *promise = nullptr;
+static VMValue thenNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
+  ObjPromise* promise = nullptr;
 
   int off = 0;
   if (argCount >= 1 && args[0].isPromise()) {
     promise = args[0].asPromise();
     off = 1;
   }
-  if (!promise)
-    return nullptr;
+  if (!promise) return nullptr;
 
-  auto *newPromise = new ObjPromise();
+  auto* newPromise = new ObjPromise();
 
   if (promise->resolved) {
     VM::PromiseMicrotask pm;
@@ -101,30 +95,30 @@ static VMValue thenNative(int argCount, VMValue *args) {
   return VMValue(newPromise);
 }
 
-static VMValue resolveStaticNative(int argCount, VMValue *args) {
-  auto *promise = new ObjPromise();
+static VMValue resolveStaticNative(int argCount, VMValue* args) {
+  auto* promise = new ObjPromise();
   promise->value = argCount >= 1 ? args[0] : VMValue(nullptr);
   promise->resolved = true;
   return VMValue(promise);
 }
 
-static VMValue rejectStaticNative(int argCount, VMValue *args) {
-  auto *promise = new ObjPromise();
+static VMValue rejectStaticNative(int argCount, VMValue* args) {
+  auto* promise = new ObjPromise();
   promise->value = argCount >= 1 ? args[0] : VMValue(nullptr);
   promise->resolved = true;
   return VMValue(promise);
 }
 
-static VMValue promiseConstructor(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue promiseConstructor(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 1 || !args[0].isClosure()) {
     vm->runtimeError(
         "Promise constructor requires a function(resolve, reject)");
     return nullptr;
   }
-  ObjClosure *executor = args[0].asClosure();
+  ObjClosure* executor = args[0].asClosure();
 
-  auto *promise = new ObjPromise();
+  auto* promise = new ObjPromise();
   vm->globals["__promise_pending"] = VMValue(promise);
 
   auto resolveFn = new ObjNative("resolve", 1, resolveNative);
@@ -140,7 +134,7 @@ static VMValue promiseConstructor(int argCount, VMValue *args) {
   return VMValue(promise);
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   auto thenFn = new ObjNative("then", -1, thenNative);
   vm->globals["__promise_then"] = VMValue(thenFn);
 
@@ -150,7 +144,7 @@ void registerAll(VM *vm) {
   vm->globals["__promise_resolve"] = VMValue(resolveStatic);
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Promise";
   sym.type = "function";
@@ -158,5 +152,5 @@ void registerSymbols(SymbolTable *scope) {
   scope->define(sym);
 }
 
-} // namespace PromiseModule
-} // namespace StdLib
+}  // namespace PromiseModule
+}  // namespace StdLib

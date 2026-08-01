@@ -1,7 +1,4 @@
 #pragma once
-#include "ABI.h"
-#include "Emitter.h"
-#include "sljitLir.h"
 #include <cstring>
 #include <iostream>
 #include <map>
@@ -9,78 +6,79 @@
 #include <string>
 #include <vector>
 
-extern "C" double jit_call_helper(void *vm_ptr, double callee_val, double *args,
+#include "ABI.h"
+#include "Emitter.h"
+#include "sljitLir.h"
+
+extern "C" double jit_call_helper(void* vm_ptr, double callee_val, double* args,
                                   int argCount);
-extern "C" double jit_get_global_helper(void *vm_ptr, const char *name);
-extern "C" void jit_set_global_helper(void *vm_ptr, const char *name,
+extern "C" double jit_get_global_helper(void* vm_ptr, const char* name);
+extern "C" void jit_set_global_helper(void* vm_ptr, const char* name,
                                       double val_d);
-extern "C" double jit_index_get_helper(void *vm_ptr, double object_val,
+extern "C" double jit_index_get_helper(void* vm_ptr, double object_val,
                                        double index_val);
-extern "C" double jit_index_set_helper(void *vm_ptr, double object_val,
+extern "C" double jit_index_set_helper(void* vm_ptr, double object_val,
                                        double index_val, double value_val);
 extern "C" double jit_mod_helper(double a, double b);
-extern "C" double jit_build_list_helper(double *args, int count);
-extern "C" double jit_build_map_helper(double *args, int count);
-extern "C" double jit_property_get_helper(void *vm_ptr, double object_val,
-                                          const char *name);
-extern "C" double jit_property_set_helper(void *vm_ptr, double object_val,
-                                          const char *name, double value_val);
+extern "C" double jit_build_list_helper(double* args, int count);
+extern "C" double jit_build_map_helper(double* args, int count);
+extern "C" double jit_property_get_helper(void* vm_ptr, double object_val,
+                                          const char* name);
+extern "C" double jit_property_set_helper(void* vm_ptr, double object_val,
+                                          const char* name, double value_val);
 extern "C" double jit_iter_has_next_helper(double index_val,
                                            double iterable_val);
-extern "C" void *jit_resolve_global_address(void *vm_ptr, const char *name,
-                                            VMValue **cell);
-extern "C" double jit_create_class_helper(void *vm, const char *name);
-extern "C" double jit_create_abstract_class_helper(void *vm, const char *name);
+extern "C" void* jit_resolve_global_address(void* vm_ptr, const char* name,
+                                            VMValue** cell);
+extern "C" double jit_create_class_helper(void* vm, const char* name);
+extern "C" double jit_create_abstract_class_helper(void* vm, const char* name);
 extern "C" double jit_bind_method_helper(double class_val, double method_val,
-                                         const char *name, int isAbstract);
+                                         const char* name, int isAbstract);
 extern "C" double jit_bind_static_method_helper(double class_val,
                                                 double method_val,
-                                                const char *name);
+                                                const char* name);
 extern "C" void jit_inherit_helper(double subclass_val, double superclass_val);
 extern "C" void jit_mixin_helper(double target_val, double mixin_val);
 extern "C" double jit_get_super_helper(double receiver_val,
-                                       double superclass_val, const char *name);
-extern "C" void jit_field_modifier_helper(double class_val, const char *name,
+                                       double superclass_val, const char* name);
+extern "C" void jit_field_modifier_helper(double class_val, const char* name,
                                           int modifier);
-extern "C" double jit_create_closure_helper(void *vm, double func_val,
-                                            double *upvalue_data,
+extern "C" double jit_create_closure_helper(void* vm, double func_val,
+                                            double* upvalue_data,
                                             int upvalue_count);
-extern "C" double jit_get_upvalue_helper(void *vm_ptr, int slot);
-extern "C" void jit_set_upvalue_helper(void *vm_ptr, int slot, double val);
-extern "C" void jit_close_upvalue_helper(void *vm_ptr, double *addr);
+extern "C" double jit_get_upvalue_helper(void* vm_ptr, int slot);
+extern "C" void jit_set_upvalue_helper(void* vm_ptr, int slot, double val);
+extern "C" void jit_close_upvalue_helper(void* vm_ptr, double* addr);
 
 class UniversalEmitter : public JitEmitter {
-private:
-  struct sljit_compiler *compiler;
+ private:
+  struct sljit_compiler* compiler;
   int funcArity;
-  std::map<size_t, struct sljit_label *> labels;
-  std::map<size_t, std::vector<struct sljit_jump *>> unresolvedJumps;
-  std::vector<char *> ownedStrings;
-  std::vector<VMValue **> ownedCells;
+  std::map<size_t, struct sljit_label*> labels;
+  std::map<size_t, std::vector<struct sljit_jump*>> unresolvedJumps;
+  std::vector<char*> ownedStrings;
+  std::vector<VMValue**> ownedCells;
   std::set<std::string> stringPool;
 
-  const char *cacheString(const std::string &s) {
+  const char* cacheString(const std::string& s) {
     auto [it, inserted] = stringPool.insert(s);
     return it->c_str();
   }
 
-public:
+ public:
   UniversalEmitter(int arity = 0) : funcArity(arity) {
     compiler = sljit_create_compiler(NULL);
   }
 
-  struct sljit_compiler *getCompiler() { return compiler; }
+  struct sljit_compiler* getCompiler() { return compiler; }
 
   ~UniversalEmitter() {
-    if (compiler)
-      sljit_free_compiler(compiler);
-    for (char *s : ownedStrings)
-      free(s);
-    for (VMValue **cell : ownedCells)
-      delete cell;
+    if (compiler) sljit_free_compiler(compiler);
+    for (char* s : ownedStrings) free(s);
+    for (VMValue** cell : ownedCells) delete cell;
   }
 
-  void setCapturedLocals(const std::vector<int> &slots) override {
+  void setCapturedLocals(const std::vector<int>& slots) override {
     // No-op in memory-based emitter
   }
 
@@ -88,9 +86,9 @@ public:
     // ABI: void* vm (R0), double* args (R1), int argCount (R2), double n (FR0)
     sljit_emit_enter(compiler, 0, SLJIT_ARGS4(F64, W, P, W, F64),
                      4 | SLJIT_ENTER_FLOAT(4), 3 | SLJIT_ENTER_FLOAT(0), 8);
-    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0); // vm_ptr
-    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S1, 0, SLJIT_R1, 0); // args_ptr
-    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S2, 0, SLJIT_R2, 0); // argCount
+    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);  // vm_ptr
+    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S1, 0, SLJIT_R1, 0);  // args_ptr
+    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S2, 0, SLJIT_R2, 0);  // argCount
 
     // Sync register n (FR0) to virtual stack local 0 (args[1]) for consistency
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_MEM1(SLJIT_S1),
@@ -171,7 +169,7 @@ public:
   }
 
   void emitRecursiveFastPath(int argStackOffset, double threshold,
-                             struct sljit_jump **outBaseCaseJump) {
+                             struct sljit_jump** outBaseCaseJump) {
     // Load the argument that was just put on stack
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR1, 0, SLJIT_MEM1(SLJIT_S1),
                     argStackOffset * sizeof(double));
@@ -192,7 +190,7 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_GREATER_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_GREATER_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -207,7 +205,7 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_GREATER, SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -222,7 +220,7 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_LESS_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_LESS_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -237,7 +235,7 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_LESS, SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -252,7 +250,7 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_NOT_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_NOT_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -267,7 +265,7 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_EQUAL, SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -301,7 +299,7 @@ public:
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR1, 0, SLJIT_MEM1(SLJIT_S1),
                     targetOffset * sizeof(double));
     sljit_emit_fset64(compiler, SLJIT_FR2, value);
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_GREATER_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_GREATER_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -315,7 +313,7 @@ public:
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR1, 0, SLJIT_MEM1(SLJIT_S1),
                     targetOffset * sizeof(double));
     sljit_emit_fset64(compiler, SLJIT_FR2, value);
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_GREATER, SLJIT_FR1, 0, SLJIT_FR2, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -467,10 +465,10 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_NOT_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_NOT_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -483,10 +481,10 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_EQUAL, SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -499,10 +497,10 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_GREATER_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_GREATER_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -515,10 +513,10 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_GREATER, SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -531,10 +529,10 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_LESS_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_LESS_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -547,10 +545,10 @@ public:
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     srcOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_LESS, SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -562,10 +560,10 @@ public:
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR1, 0, SLJIT_MEM1(SLJIT_S1),
                     targetOffset * sizeof(double));
     sljit_emit_fset64(compiler, SLJIT_FR2, 0.0);
-    struct sljit_jump *jump = sljit_emit_fcmp(compiler, SLJIT_F_NOT_EQUAL,
+    struct sljit_jump* jump = sljit_emit_fcmp(compiler, SLJIT_F_NOT_EQUAL,
                                               SLJIT_FR1, 0, SLJIT_FR2, 0);
     sljit_emit_fset64(compiler, SLJIT_FR1, 1.0);
-    struct sljit_jump *jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump_end = sljit_emit_jump(compiler, SLJIT_JUMP);
     sljit_set_label(jump, sljit_emit_label(compiler));
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_set_label(jump_end, sljit_emit_label(compiler));
@@ -594,11 +592,11 @@ public:
                     targetOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  std::vector<VMValue *> globalCaches;
+  std::vector<VMValue*> globalCaches;
 
-  void emitGetGlobal(const std::string &name, int targetOffset) override {
+  void emitGetGlobal(const std::string& name, int targetOffset) override {
     // Allocate a persistent "cell" for this global variable
-    VMValue **cell = new VMValue *(nullptr);
+    VMValue** cell = new VMValue*(nullptr);
     ownedCells.push_back(cell);
 
     // 1. Load the value from the cell
@@ -606,19 +604,19 @@ public:
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R1, 0, SLJIT_MEM1(SLJIT_R0), 0);
 
     // 2. If cell is null, go to slow path to resolve it
-    struct sljit_jump *is_null =
+    struct sljit_jump* is_null =
         sljit_emit_cmp(compiler, SLJIT_EQUAL, SLJIT_R1, 0, SLJIT_IMM, 0);
 
     // --- FAST PATH: Already cached ---
     // Load VMValue (8 bytes) from the address in R1
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_R1),
                     0);
-    struct sljit_jump *fast_end = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* fast_end = sljit_emit_jump(compiler, SLJIT_JUMP);
 
     // --- SLOW PATH: Resolve and cache ---
     sljit_set_label(is_null, sljit_emit_label(compiler));
-    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0); // vm_ptr
-    const char *cname = cacheString(name);
+    sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);  // vm_ptr
+    const char* cname = cacheString(name);
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R1, 0, SLJIT_IMM,
                    (sljit_sw)cname);
 
@@ -635,9 +633,9 @@ public:
                     targetOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  void emitSetGlobal(const std::string &name, int sourceOffset) override {
+  void emitSetGlobal(const std::string& name, int sourceOffset) override {
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
-    const char *cname = cacheString(name);
+    const char* cname = cacheString(name);
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R1, 0, SLJIT_IMM,
                    (sljit_sw)cname);
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
@@ -692,7 +690,7 @@ public:
                     targetOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  void emitPropertyGet(int objectOffset, const std::string &name) override {
+  void emitPropertyGet(int objectOffset, const std::string& name) override {
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
                     objectOffset * sizeof(double));
@@ -704,7 +702,7 @@ public:
                     objectOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  void emitPropertySet(int objectOffset, const std::string &name) override {
+  void emitPropertySet(int objectOffset, const std::string& name) override {
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
                     objectOffset * sizeof(double));
@@ -729,7 +727,7 @@ public:
                     targetOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  void emitCreateClass(int targetOffset, const std::string &name) override {
+  void emitCreateClass(int targetOffset, const std::string& name) override {
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R1, 0, SLJIT_IMM,
                    (sljit_sw)cacheString(name));
@@ -740,7 +738,7 @@ public:
   }
 
   void emitCreateAbstractClass(int targetOffset,
-                               const std::string &name) override {
+                               const std::string& name) override {
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R1, 0, SLJIT_IMM,
                    (sljit_sw)cacheString(name));
@@ -750,7 +748,7 @@ public:
                     targetOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  void emitBindMethod(int targetOffset, const std::string &name,
+  void emitBindMethod(int targetOffset, const std::string& name,
                       bool isAbstract) override {
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
                     targetOffset * sizeof(double));
@@ -767,7 +765,7 @@ public:
   }
 
   void emitBindStaticMethod(int targetOffset,
-                            const std::string &name) override {
+                            const std::string& name) override {
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
                     targetOffset * sizeof(double));
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR1, 0, SLJIT_MEM1(SLJIT_S1),
@@ -798,11 +796,11 @@ public:
                      (sljit_sw)jit_mixin_helper);
   }
 
-  void emitGetSuper(int targetOffset, const std::string &name) override {
+  void emitGetSuper(int targetOffset, const std::string& name) override {
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
-                    (targetOffset + 1) * sizeof(double)); // receiver
+                    (targetOffset + 1) * sizeof(double));  // receiver
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR1, 0, SLJIT_MEM1(SLJIT_S1),
-                    targetOffset * sizeof(double)); // superclass
+                    targetOffset * sizeof(double));  // superclass
     sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM,
                    (sljit_sw)cacheString(name));
     sljit_emit_icall(compiler, SLJIT_CALL, SLJIT_ARGS3(F64, F64, F64, W),
@@ -811,7 +809,7 @@ public:
                     targetOffset * sizeof(double), SLJIT_FR0, 0);
   }
 
-  void emitFieldModifier(int targetOffset, const std::string &name,
+  void emitFieldModifier(int targetOffset, const std::string& name,
                          uint8_t modifier) override {
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1),
                     targetOffset * sizeof(double));
@@ -823,10 +821,10 @@ public:
   }
 
   void emitCreateClosure(int targetOffset, double funcRaw,
-                         const uint8_t *upvalueBytes,
+                         const uint8_t* upvalueBytes,
                          int upvalueCount) override {
     int dataOffset =
-        JIT_UPVALUE_DATA_SLOT; // Use end of buffer for upvalue metadata
+        JIT_UPVALUE_DATA_SLOT;  // Use end of buffer for upvalue metadata
     for (int j = 0; j < upvalueCount; j++) {
       bool isLocal = upvalueBytes[j * 2];
       int index = upvalueBytes[j * 2 + 1];
@@ -891,7 +889,7 @@ public:
   }
 
   void emitJump(size_t targetByteCodeIndex) override {
-    struct sljit_jump *jump = sljit_emit_jump(compiler, SLJIT_JUMP);
+    struct sljit_jump* jump = sljit_emit_jump(compiler, SLJIT_JUMP);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
     } else {
@@ -903,7 +901,7 @@ public:
     sljit_emit_fset64(compiler, SLJIT_FR1, 0.0);
     sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR2, 0, SLJIT_MEM1(SLJIT_S1),
                     stackOffset * sizeof(double));
-    struct sljit_jump *jump =
+    struct sljit_jump* jump =
         sljit_emit_fcmp(compiler, SLJIT_F_EQUAL, SLJIT_FR2, 0, SLJIT_FR1, 0);
     if (labels.count(targetByteCodeIndex)) {
       sljit_set_label(jump, labels[targetByteCodeIndex]);
@@ -914,7 +912,7 @@ public:
 
   JitFunc finalize() override {
     if (!unresolvedJumps.empty()) {
-      for (const auto &pair : unresolvedJumps) {
+      for (const auto& pair : unresolvedJumps) {
         std::cerr << "JIT Abort: unresolved jump to target bytecode index "
                   << pair.first << std::endl;
       }

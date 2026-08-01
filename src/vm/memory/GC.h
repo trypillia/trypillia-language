@@ -6,10 +6,10 @@
 class VM;
 
 class GC {
-public:
-  static void markValue(VMValue &value);
-  static void markObj(Obj *obj);
-  static void collect(VM *vm);
+ public:
+  static void markValue(VMValue& value);
+  static void markObj(Obj* obj);
+  static void collect(VM* vm);
 };
 
 #endif

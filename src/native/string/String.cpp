@@ -1,4 +1,5 @@
 #include "String.h"
+
 #include <algorithm>
 #include <cctype>
 #include <string>
@@ -6,13 +7,12 @@
 namespace StdLib {
 namespace StringModule {
 
-static VMValue stringLength(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue stringLength(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   return static_cast<double>(args[0].asString()->flatten().length());
 }
 
-static VMValue stringSubstring(int argCount, VMValue *args) {
+static VMValue stringSubstring(int argCount, VMValue* args) {
   if (argCount != 3 || !args[0].isString() || !args[1].isNumber() ||
       !args[2].isNumber())
     return nullptr;
@@ -26,27 +26,22 @@ static VMValue stringSubstring(int argCount, VMValue *args) {
   return str.substr(static_cast<size_t>(start), static_cast<size_t>(length));
 }
 
-static VMValue stringToUpper(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue stringToUpper(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string str = args[0].asString()->flatten();
-  for (char &c : str)
-    c = std::toupper(c);
+  for (char& c : str) c = std::toupper(c);
   return str;
 }
 
-static VMValue stringToLower(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue stringToLower(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string str = args[0].asString()->flatten();
-  for (char &c : str)
-    c = std::tolower(c);
+  for (char& c : str) c = std::tolower(c);
   return str;
 }
 
-static VMValue stringTrim(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue stringTrim(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string str = args[0].asString()->flatten();
 
   auto start = str.begin();
@@ -62,7 +57,7 @@ static VMValue stringTrim(int argCount, VMValue *args) {
   return std::string(start, end + 1);
 }
 
-static VMValue stringSplit(int argCount, VMValue *args) {
+static VMValue stringSplit(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString())
     return nullptr;
 
@@ -83,7 +78,7 @@ static VMValue stringSplit(int argCount, VMValue *args) {
   return list;
 }
 
-static VMValue stringReplace(int argCount, VMValue *args) {
+static VMValue stringReplace(int argCount, VMValue* args) {
   if (argCount != 3 || !args[0].isString() || !args[1].isString() ||
       !args[2].isString())
     return nullptr;
@@ -92,8 +87,7 @@ static VMValue stringReplace(int argCount, VMValue *args) {
   std::string search = args[1].asString()->flatten();
   std::string replace = args[2].asString()->flatten();
 
-  if (search.empty())
-    return str;
+  if (search.empty()) return str;
 
   size_t pos = 0;
   while ((pos = str.find(search, pos)) != std::string::npos) {
@@ -104,19 +98,18 @@ static VMValue stringReplace(int argCount, VMValue *args) {
   return str;
 }
 
-static VMValue stringIndexOf(int argCount, VMValue *args) {
+static VMValue stringIndexOf(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString())
     return nullptr;
   std::string str = args[0].asString()->flatten();
   std::string search = args[1].asString()->flatten();
 
   size_t pos = str.find(search);
-  if (pos == std::string::npos)
-    return (double)-1;
+  if (pos == std::string::npos) return (double)-1;
   return (double)pos;
 }
 
-static VMValue stringIncludes(int argCount, VMValue *args) {
+static VMValue stringIncludes(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString())
     return nullptr;
   std::string str = args[0].asString()->flatten();
@@ -125,7 +118,7 @@ static VMValue stringIncludes(int argCount, VMValue *args) {
   return str.find(search) != std::string::npos;
 }
 
-static VMValue stringStartsWith(int argCount, VMValue *args) {
+static VMValue stringStartsWith(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString())
     return nullptr;
   std::string str = args[0].asString()->flatten();
@@ -134,7 +127,7 @@ static VMValue stringStartsWith(int argCount, VMValue *args) {
   return str.rfind(prefix, 0) == 0;
 }
 
-static VMValue stringEndsWith(int argCount, VMValue *args) {
+static VMValue stringEndsWith(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString())
     return nullptr;
   std::string str = args[0].asString()->flatten();
@@ -148,9 +141,8 @@ static VMValue stringEndsWith(int argCount, VMValue *args) {
   }
 }
 
-static VMValue stringToNumber(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue stringToNumber(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string str = args[0].asString()->flatten();
   try {
     return std::stod(str);
@@ -159,7 +151,7 @@ static VMValue stringToNumber(int argCount, VMValue *args) {
   }
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto stringClass = new ObjClass("String");
 
@@ -184,12 +176,12 @@ void registerAll(VM *vm) {
   vm->globals["String"] = stringClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "String";
   sym.type = "class";
   sym.isConst = true;
   scope->define(sym);
 }
-} // namespace StringModule
-} // namespace StdLib
+}  // namespace StringModule
+}  // namespace StdLib

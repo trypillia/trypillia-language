@@ -1,4 +1,5 @@
 #include "Test.h"
+
 #include <csignal>
 #include <string>
 #include <vector>
@@ -6,7 +7,7 @@
 namespace StdLib {
 namespace Test {
 
-static std::string valueToString(const VMValue &val, int depth = 0) {
+static std::string valueToString(const VMValue& val, int depth = 0) {
   if (depth > 3) {
     return "...";
   }
@@ -14,8 +15,7 @@ static std::string valueToString(const VMValue &val, int depth = 0) {
     auto list = val.asList();
     std::string result = "[";
     for (size_t i = 0; i < list->elements.size(); i++) {
-      if (i > 0)
-        result += ", ";
+      if (i > 0) result += ", ";
       result += valueToString(list->elements[i], depth + 1);
     }
     result += "]";
@@ -25,9 +25,8 @@ static std::string valueToString(const VMValue &val, int depth = 0) {
     auto map = val.asMap();
     std::string result = "{";
     bool first = true;
-    for (auto &[k, v] : map->values) {
-      if (!first)
-        result += ", ";
+    for (auto& [k, v] : map->values) {
+      if (!first) result += ", ";
       first = false;
       result += k.toString() + ": " + valueToString(v, depth + 1);
     }
@@ -37,10 +36,9 @@ static std::string valueToString(const VMValue &val, int depth = 0) {
   return val.toString(true);
 }
 
-static void getSourceLocation(VM *vm, std::string &filename, int &line) {
-  if (!vm || vm->frames.empty())
-    return;
-  auto &frame = vm->frames.back();
+static void getSourceLocation(VM* vm, std::string& filename, int& line) {
+  if (!vm || vm->frames.empty()) return;
+  auto& frame = vm->frames.back();
   auto func = frame.closure->function;
   filename = func->filename;
   auto ip = frame.ip;
@@ -52,7 +50,7 @@ static void getSourceLocation(VM *vm, std::string &filename, int &line) {
   }
 }
 
-static void failAssertion(VM *vm, const std::string &message) {
+static void failAssertion(VM* vm, const std::string& message) {
   std::cerr << message << std::endl;
   if (vm->catchJumpEnabled) {
     longjmp(vm->catchJmpBuf, 1);
@@ -61,7 +59,7 @@ static void failAssertion(VM *vm, const std::string &message) {
   }
 }
 
-static void trackTestResult(VM *vm, const std::string &testName, bool passed) {
+static void trackTestResult(VM* vm, const std::string& testName, bool passed) {
   auto countIt = vm->globals.find("__test_count");
   int count = 0;
   if (countIt != vm->globals.end() && countIt->second.isNumber()) {
@@ -71,7 +69,7 @@ static void trackTestResult(VM *vm, const std::string &testName, bool passed) {
   vm->globals["__test_count"] = VMValue((double)count);
 
   auto namesIt = vm->globals.find("__test_names");
-  ObjList *namesList;
+  ObjList* namesList;
   if (namesIt == vm->globals.end() || !namesIt->second.isList()) {
     namesList = new ObjList({});
     vm->globals["__test_names"] = VMValue(namesList);
@@ -81,7 +79,7 @@ static void trackTestResult(VM *vm, const std::string &testName, bool passed) {
   namesList->elements.push_back(VMValue(testName));
 
   auto resultsIt = vm->globals.find("__test_results");
-  ObjList *resultsList;
+  ObjList* resultsList;
   if (resultsIt == vm->globals.end() || !resultsIt->second.isList()) {
     resultsList = new ObjList({});
     vm->globals["__test_results"] = VMValue(resultsList);
@@ -91,14 +89,14 @@ static void trackTestResult(VM *vm, const std::string &testName, bool passed) {
   resultsList->elements.push_back(VMValue(passed));
 }
 
-static VMValue assertNative(int argCount, VMValue *args) {
+static VMValue assertNative(int argCount, VMValue* args) {
   if (argCount < 1) {
     failAssertion(currentVM,
                   "FAIL: assert requires at least 1 argument (condition)");
     return nullptr;
   }
 
-  VM *vm = currentVM;
+  VM* vm = currentVM;
   bool condition = args[0].isBool() ? args[0].asBool() : !args[0].isNil();
 
   if (!condition) {
@@ -112,8 +110,7 @@ static VMValue assertNative(int argCount, VMValue *args) {
     }
 
     std::string loc;
-    if (!filename.empty())
-      loc = filename + ":" + std::to_string(line) + " ";
+    if (!filename.empty()) loc = filename + ":" + std::to_string(line) + " ";
 
     failAssertion(vm, "FAIL: " + loc + "assertion failed" + msg);
   }
@@ -121,7 +118,7 @@ static VMValue assertNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue assertEqNative(int argCount, VMValue *args) {
+static VMValue assertEqNative(int argCount, VMValue* args) {
   if (argCount < 2) {
     failAssertion(
         currentVM,
@@ -129,7 +126,7 @@ static VMValue assertEqNative(int argCount, VMValue *args) {
     return nullptr;
   }
 
-  VM *vm = currentVM;
+  VM* vm = currentVM;
   VMValue actual = args[0];
   VMValue expected = args[1];
 
@@ -144,8 +141,7 @@ static VMValue assertEqNative(int argCount, VMValue *args) {
     }
 
     std::string loc;
-    if (!filename.empty())
-      loc = filename + ":" + std::to_string(line) + " ";
+    if (!filename.empty()) loc = filename + ":" + std::to_string(line) + " ";
 
     failAssertion(vm, "FAIL: " + loc + "expected " + valueToString(expected) +
                           " but got " + valueToString(actual) + msg);
@@ -154,7 +150,7 @@ static VMValue assertEqNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue assertNeqNative(int argCount, VMValue *args) {
+static VMValue assertNeqNative(int argCount, VMValue* args) {
   if (argCount < 2) {
     failAssertion(
         currentVM,
@@ -162,7 +158,7 @@ static VMValue assertNeqNative(int argCount, VMValue *args) {
     return nullptr;
   }
 
-  VM *vm = currentVM;
+  VM* vm = currentVM;
   VMValue actual = args[0];
   VMValue unexpected = args[1];
 
@@ -177,8 +173,7 @@ static VMValue assertNeqNative(int argCount, VMValue *args) {
     }
 
     std::string loc;
-    if (!filename.empty())
-      loc = filename + ":" + std::to_string(line) + " ";
+    if (!filename.empty()) loc = filename + ":" + std::to_string(line) + " ";
 
     failAssertion(vm, "FAIL: " + loc + "expected " + valueToString(actual) +
                           " to differ from " + valueToString(unexpected) + msg);
@@ -187,14 +182,14 @@ static VMValue assertNeqNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue assertThrowsNative(int argCount, VMValue *args) {
+static VMValue assertThrowsNative(int argCount, VMValue* args) {
   if (argCount < 1) {
     failAssertion(currentVM,
                   "FAIL: assertThrows requires at least 1 argument (function)");
     return nullptr;
   }
 
-  VM *vm = currentVM;
+  VM* vm = currentVM;
   VMValue fn = args[0];
 
   if (!fn.isClosure()) {
@@ -231,8 +226,7 @@ static VMValue assertThrowsNative(int argCount, VMValue *args) {
       int line = 0;
       getSourceLocation(vm, filename, line);
       std::string loc;
-      if (!filename.empty())
-        loc = filename + ":" + std::to_string(line) + " ";
+      if (!filename.empty()) loc = filename + ":" + std::to_string(line) + " ";
 
       std::string msg;
       if (argCount >= 2 && args[1].isString()) {
@@ -252,21 +246,20 @@ static VMValue assertThrowsNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static void runCallbacks(VM *vm, const std::string &key) {
+static void runCallbacks(VM* vm, const std::string& key) {
   auto it = vm->globals.find(key);
-  if (it == vm->globals.end() || !it->second.isList())
-    return;
+  if (it == vm->globals.end() || !it->second.isList()) return;
   auto list = it->second.asList();
-  for (auto &cb : list->elements) {
+  for (auto& cb : list->elements) {
     if (cb.isClosure()) {
       vm->callClosure(cb, 0, nullptr);
     }
   }
 }
 
-static void addCallback(VM *vm, const std::string &key, VMValue fn) {
+static void addCallback(VM* vm, const std::string& key, VMValue fn) {
   auto it = vm->globals.find(key);
-  ObjList *list;
+  ObjList* list;
   if (it == vm->globals.end() || !it->second.isList()) {
     list = new ObjList({});
     vm->globals[key] = VMValue(list);
@@ -276,8 +269,8 @@ static void addCallback(VM *vm, const std::string &key, VMValue fn) {
   list->elements.push_back(fn);
 }
 
-static VMValue beforeEachNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue beforeEachNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 1 || !args[0].isClosure()) {
     failAssertion(vm, "FAIL: beforeEach requires a function argument");
     return nullptr;
@@ -286,8 +279,8 @@ static VMValue beforeEachNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue afterEachNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue afterEachNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 1 || !args[0].isClosure()) {
     failAssertion(vm, "FAIL: afterEach requires a function argument");
     return nullptr;
@@ -296,8 +289,8 @@ static VMValue afterEachNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue beforeNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue beforeNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 1 || !args[0].isClosure()) {
     failAssertion(vm, "FAIL: before requires a function argument");
     return nullptr;
@@ -306,8 +299,8 @@ static VMValue beforeNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue afterNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue afterNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 1 || !args[0].isClosure()) {
     failAssertion(vm, "FAIL: after requires a function argument");
     return nullptr;
@@ -316,13 +309,13 @@ static VMValue afterNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static bool isOnlyMode(VM *vm) {
+static bool isOnlyMode(VM* vm) {
   auto it = vm->globals.find("__test_only");
   return it != vm->globals.end() && it->second.isBool() && it->second.asBool();
 }
 
-static VMValue describeNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue describeNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 2 || !args[0].isString() || !args[1].isClosure()) {
     return nullptr;
   }
@@ -354,12 +347,12 @@ static VMValue describeNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue itNative(int argCount, VMValue *args) {
+static VMValue itNative(int argCount, VMValue* args) {
   if (argCount < 2) {
     failAssertion(currentVM, "FAIL: it requires 2 arguments (name, fn)");
     return nullptr;
   }
-  VM *vm = currentVM;
+  VM* vm = currentVM;
   VMValue name = args[0];
   VMValue fn = args[1];
 
@@ -424,8 +417,8 @@ static VMValue itNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue xitNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue xitNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 1 || !args[0].isString()) {
     return nullptr;
   }
@@ -440,8 +433,8 @@ static VMValue xitNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue fitNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue fitNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 2) {
     failAssertion(vm, "FAIL: fit requires 2 arguments (name, fn)");
     return nullptr;
@@ -507,8 +500,8 @@ static VMValue fitNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue fdescribeNative(int argCount, VMValue *args) {
-  VM *vm = currentVM;
+static VMValue fdescribeNative(int argCount, VMValue* args) {
+  VM* vm = currentVM;
   if (argCount < 2 || !args[0].isString() || !args[1].isClosure()) {
     return nullptr;
   }
@@ -537,7 +530,7 @@ static VMValue fdescribeNative(int argCount, VMValue *args) {
   return nullptr;
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   vm->defineNative("assert", -1, assertNative);
   vm->defineNative("assertEq", -1, assertEqNative);
   vm->defineNative("assertNeq", -1, assertNeqNative);
@@ -553,8 +546,8 @@ void registerAll(VM *vm) {
   vm->defineNative("afterEach", -1, afterEachNative);
 }
 
-void registerSymbols(SymbolTable *scope) {
-  auto addFunc = [&](const std::string &name) {
+void registerSymbols(SymbolTable* scope) {
+  auto addFunc = [&](const std::string& name) {
     Symbol sym;
     sym.name = name;
     sym.type = "function";
@@ -576,5 +569,5 @@ void registerSymbols(SymbolTable *scope) {
   addFunc("afterEach");
 }
 
-} // namespace Test
-} // namespace StdLib
+}  // namespace Test
+}  // namespace StdLib

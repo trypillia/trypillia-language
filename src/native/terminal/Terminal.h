@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace TerminalModule {
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace TerminalModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace TerminalModule
+}  // namespace StdLib
 
 #endif

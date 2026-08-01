@@ -1,4 +1,5 @@
 #include "Random.h"
+
 #include <iomanip>
 #include <random>
 #include <sstream>
@@ -8,13 +9,13 @@ namespace StdLib {
 namespace RandomModule {
 
 // Use a thread-local random engine for thread safety and performance
-static std::mt19937 &getEngine() {
+static std::mt19937& getEngine() {
   static thread_local std::random_device rd;
   static thread_local std::mt19937 engine(rd());
   return engine;
 }
 
-static VMValue randomInt(int argCount, VMValue *args) {
+static VMValue randomInt(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isNumber() || !args[1].isNumber())
     return nullptr;
   int min = static_cast<int>(args[0].asNumber());
@@ -30,7 +31,7 @@ static VMValue randomInt(int argCount, VMValue *args) {
   return static_cast<double>(dist(getEngine()));
 }
 
-static VMValue randomFloat(int argCount, VMValue *args) {
+static VMValue randomFloat(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isNumber() || !args[1].isNumber())
     return nullptr;
   double min = args[0].asNumber();
@@ -46,24 +47,22 @@ static VMValue randomFloat(int argCount, VMValue *args) {
   return dist(getEngine());
 }
 
-static VMValue randomChoice(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isList())
-    return nullptr;
+static VMValue randomChoice(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
 
-  if (list->elements.empty())
-    return nullptr;
+  if (list->elements.empty()) return nullptr;
 
   std::uniform_int_distribution<int> dist(
       0, static_cast<int>(list->elements.size() - 1));
   return list->elements[static_cast<size_t>(dist(getEngine()))];
 }
 
-static VMValue randomUuid(int argCount, VMValue *args) {
+static VMValue randomUuid(int argCount, VMValue* args) {
   std::uniform_int_distribution<int> hexDist(0, 15);
   std::uniform_int_distribution<int> variantDist(8, 11);
 
-  const char *hexChars = "0123456789abcdef";
+  const char* hexChars = "0123456789abcdef";
   std::string uuid = "00000000-0000-4000-0000-000000000000";
 
   for (int i = 0; i < 36; i++) {
@@ -84,7 +83,7 @@ static VMValue randomUuid(int argCount, VMValue *args) {
   return uuid;
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto randomClass = new ObjClass("Random");
 
@@ -96,12 +95,12 @@ void registerAll(VM *vm) {
   vm->globals["Random"] = randomClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Random";
   sym.type = "class";
   sym.isConst = true;
   scope->define(sym);
 }
-} // namespace RandomModule
-} // namespace StdLib
+}  // namespace RandomModule
+}  // namespace StdLib

@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace Math {
-void registerAll(VM *vm);
-void registerSymbols(SymbolTable *scope);
-} // namespace Math
-} // namespace StdLib
+void registerAll(VM* vm);
+void registerSymbols(SymbolTable* scope);
+}  // namespace Math
+}  // namespace StdLib
 
 #endif

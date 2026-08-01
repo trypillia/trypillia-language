@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace ListModule {
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace ListModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace ListModule
+}  // namespace StdLib
 
 #endif

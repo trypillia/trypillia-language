@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace RegexModule {
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace RegexModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace RegexModule
+}  // namespace StdLib
 
 #endif

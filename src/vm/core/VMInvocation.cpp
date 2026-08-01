@@ -1,6 +1,7 @@
+#include <string>
+
 #include "../memory/ObjectRuntime.h"
 #include "VM.h"
-#include <string>
 
 bool VM::executeIndexGet() {
   VMValue index = pop();
@@ -39,7 +40,7 @@ bool VM::executeIndexGet() {
     if (map->values.count(index)) {
       push(map->values[index]);
     } else {
-      push(nullptr); // Return nil for missing keys
+      push(nullptr);  // Return nil for missing keys
     }
   } else {
     runtimeError(std::string("Can only index into lists, maps, or strings."));
@@ -48,7 +49,7 @@ bool VM::executeIndexGet() {
   return true;
 }
 
-bool VM::executePropertyGet(const std::string &name) {
+bool VM::executePropertyGet(const std::string& name) {
   VMValue instanceVal = peek(0);
   std::string callerClass =
       frames.back().closure
@@ -79,7 +80,7 @@ bool VM::executePropertyGet(const std::string &name) {
                      name + "'.");
         return false;
       }
-      pop(); // instance
+      pop();  // instance
       push(new ObjBoundMethod(instance, method));
     } else {
       runtimeError(std::string("Undefined property '") + name + "'.");
@@ -110,7 +111,7 @@ bool VM::executePropertyGet(const std::string &name) {
     if (globals.count("String")) {
       auto klass = globals["String"].asClass();
       if (klass->statics.count(name)) {
-        pop(); // pop string
+        pop();  // pop string
         push(new ObjBoundMethod(instanceVal, klass->statics[name]));
         return true;
       }
@@ -121,7 +122,7 @@ bool VM::executePropertyGet(const std::string &name) {
     if (globals.count("List")) {
       auto klass = globals["List"].asClass();
       if (klass->statics.count(name)) {
-        pop(); // pop list
+        pop();  // pop list
         push(new ObjBoundMethod(instanceVal, klass->statics[name]));
         return true;
       }
@@ -132,7 +133,7 @@ bool VM::executePropertyGet(const std::string &name) {
     if (globals.count("Map")) {
       auto klass = globals["Map"].asClass();
       if (klass->statics.count(name)) {
-        pop(); // pop map
+        pop();  // pop map
         push(new ObjBoundMethod(instanceVal, klass->statics[name]));
         return true;
       }
@@ -186,7 +187,7 @@ bool VM::executeCall(uint8_t argCount) {
       nativeJitFunc = jit.compileMathFunction(function);
       if (nativeJitFunc) {
         compiledFuncs[funcPtr] = nativeJitFunc;
-        funcPtr->jitAddr = (void *)nativeJitFunc;
+        funcPtr->jitAddr = (void*)nativeJitFunc;
         std::cerr << "JIT compiled " << function->name << " at call #"
                   << funcPtr->callCount << std::endl;
       } else {
@@ -226,7 +227,7 @@ bool VM::executeCall(uint8_t argCount) {
         jitClosure = nullptr;
         stackTop -= argCount + 1;
         push(result);
-        return true; // Skip standard frame push!
+        return true;  // Skip standard frame push!
       }
       // Fall through to interpreter if not all numbers
     }
@@ -263,7 +264,7 @@ bool VM::executeCall(uint8_t argCount) {
                    klass->name + "'.");
       return false;
     }
-    for (auto const &[name, method] : klass->methods) {
+    for (auto const& [name, method] : klass->methods) {
       if (isMethodAbstract(method)) {
         runtimeError(std::string("Cannot instantiate class '") + klass->name +
                      "' because abstract method '" + name +
@@ -306,7 +307,7 @@ bool VM::executeCall(uint8_t argCount) {
       } else {
         auto native = initMethod.asNative();
         native->function(argCount, stack + (stackTop - stack) - argCount);
-        stackTop -= argCount; // leave the instance on stack
+        stackTop -= argCount;  // leave the instance on stack
       }
     } else if (argCount != 0) {
       runtimeError(std::string("Expected 0 arguments but got ") +
@@ -325,10 +326,8 @@ bool VM::executeCall(uint8_t argCount) {
     int maxArity = getMethodMaxArity(function);
     if (function.isNative()) {
       if (!bound->receiver.isInstance()) {
-        if (minArity != -1)
-          minArity -= 1;
-        if (maxArity != -1)
-          maxArity -= 1;
+        if (minArity != -1) minArity -= 1;
+        if (maxArity != -1) maxArity -= 1;
       }
     }
     if (minArity != -1 && (argCount < minArity || argCount > maxArity)) {
@@ -362,14 +361,14 @@ bool VM::executeCall(uint8_t argCount) {
     } else {
       auto native = function.asNative();
       int passedArgCount = argCount;
-      VMValue *argsPtr;
+      VMValue* argsPtr;
       if (!bound->receiver.isInstance()) {
         passedArgCount += 1;
         argsPtr = stack + (stackTop - stack) - argCount -
-                  1; // Primitive methods expect receiver at args[0]
+                  1;  // Primitive methods expect receiver at args[0]
       } else {
         argsPtr = stack + (stackTop - stack) -
-                  argCount; // Instance methods expect receiver at args[-1]
+                  argCount;  // Instance methods expect receiver at args[-1]
       }
       VMValue result = native->function(passedArgCount, argsPtr);
       stackTop -= argCount + 1;
@@ -381,9 +380,8 @@ bool VM::executeCall(uint8_t argCount) {
   }
   return true;
 }
-VMValue VM::callClosure(VMValue closureVal, int argCount, VMValue *args) {
-  if (!closureVal.isClosure())
-    return nullptr;
+VMValue VM::callClosure(VMValue closureVal, int argCount, VMValue* args) {
+  if (!closureVal.isClosure()) return nullptr;
   auto closure = closureVal.asClosure();
 
   int initialFrameCount = static_cast<int>(frames.size());
@@ -407,15 +405,12 @@ VMValue VM::callClosure(VMValue closureVal, int argCount, VMValue *args) {
   return pop();
 }
 
-VMValue VM::instantiateClass(VMValue classVal, int argCount, VMValue *args) {
-  if (!classVal.isClass())
-    return nullptr;
+VMValue VM::instantiateClass(VMValue classVal, int argCount, VMValue* args) {
+  if (!classVal.isClass()) return nullptr;
   auto klass = classVal.asClass();
-  if (klass->isAbstract)
-    return nullptr;
-  for (auto const &[name, method] : klass->methods) {
-    if (isMethodAbstract(method))
-      return nullptr;
+  if (klass->isAbstract) return nullptr;
+  for (auto const& [name, method] : klass->methods) {
+    if (isMethodAbstract(method)) return nullptr;
   }
   auto instance = new ObjInstance(klass);
 
@@ -434,8 +429,7 @@ VMValue VM::instantiateClass(VMValue classVal, int argCount, VMValue *args) {
 
     if (initMethod.isClosure()) {
       push(instance);
-      for (int i = 0; i < argCount; i++)
-        push(args[i]);
+      for (int i = 0; i < argCount; i++) push(args[i]);
       auto closure = initMethod.asClosure();
       CallFrame newFrame;
       newFrame.closure = closure;
@@ -445,8 +439,7 @@ VMValue VM::instantiateClass(VMValue classVal, int argCount, VMValue *args) {
       int initialDepth = static_cast<int>(frames.size() - 1);
       InterpretResult res = run(initialDepth);
       frames.pop_back();
-      if (res == InterpretResult::INTERPRET_RUNTIME_ERROR)
-        return nullptr;
+      if (res == InterpretResult::INTERPRET_RUNTIME_ERROR) return nullptr;
       return instance;
     }
   }

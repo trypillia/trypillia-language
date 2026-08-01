@@ -111,11 +111,11 @@ struct Token {
 };
 
 class Lexer {
-public:
-  Lexer(const std::string &source);
+ public:
+  Lexer(const std::string& source);
   Token nextToken();
 
-private:
+ private:
   std::string source;
   size_t currentIndex;
   int line;
@@ -134,4 +134,4 @@ private:
   Token scanToken();
 };
 
-#endif // LEXER_H
+#endif  // LEXER_H

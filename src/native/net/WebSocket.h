@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace WebSocketModule {
-void registerAll(VM *vm);
-void registerSymbols(SymbolTable *scope);
-} // namespace WebSocketModule
-} // namespace StdLib
+void registerAll(VM* vm);
+void registerSymbols(SymbolTable* scope);
+}  // namespace WebSocketModule
+}  // namespace StdLib
 
 #endif

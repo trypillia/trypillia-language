@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace MapModule {
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace MapModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace MapModule
+}  // namespace StdLib
 
 #endif

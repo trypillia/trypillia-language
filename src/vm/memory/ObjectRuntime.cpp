@@ -1,48 +1,40 @@
 #include "ObjectRuntime.h"
-#include "../core/VM.h"
+
 #include <string>
 
-bool isMethodAbstract(const VMValue &method) {
-  if (method.isClosure())
-    return method.asClosure()->function->isAbstract;
-  if (method.isNative())
-    return method.asNative()->isAbstract;
+#include "../core/VM.h"
+
+bool isMethodAbstract(const VMValue& method) {
+  if (method.isClosure()) return method.asClosure()->function->isAbstract;
+  if (method.isNative()) return method.asNative()->isAbstract;
   return false;
 }
 
-VMAccessModifier getMethodAccessModifier(const VMValue &method) {
-  if (method.isClosure())
-    return method.asClosure()->function->accessModifier;
-  if (method.isNative())
-    return method.asNative()->accessModifier;
+VMAccessModifier getMethodAccessModifier(const VMValue& method) {
+  if (method.isClosure()) return method.asClosure()->function->accessModifier;
+  if (method.isNative()) return method.asNative()->accessModifier;
   return VMAccessModifier::PUBLIC;
 }
 
-std::string getMethodName(const VMValue &method) {
-  if (method.isClosure())
-    return method.asClosure()->function->name;
-  if (method.isNative())
-    return method.asNative()->name;
+std::string getMethodName(const VMValue& method) {
+  if (method.isClosure()) return method.asClosure()->function->name;
+  if (method.isNative()) return method.asNative()->name;
   return "";
 }
 
-int getMethodMinArity(const VMValue &method) {
-  if (method.isClosure())
-    return method.asClosure()->function->arity;
-  if (method.isNative())
-    return method.asNative()->arity;
+int getMethodMinArity(const VMValue& method) {
+  if (method.isClosure()) return method.asClosure()->function->arity;
+  if (method.isNative()) return method.asNative()->arity;
   return -1;
 }
 
-int getMethodMaxArity(const VMValue &method) {
-  if (method.isClosure())
-    return method.asClosure()->function->maxArity;
-  if (method.isNative())
-    return method.asNative()->arity;
+int getMethodMaxArity(const VMValue& method) {
+  if (method.isClosure()) return method.asClosure()->function->maxArity;
+  if (method.isNative()) return method.asNative()->arity;
   return -1;
 }
 
-int utf8_length(const std::string &str) {
+int utf8_length(const std::string& str) {
   int length = 0;
   for (size_t i = 0; i < str.length(); i++) {
     if ((str[i] & 0xC0) != 0x80) {
@@ -52,7 +44,7 @@ int utf8_length(const std::string &str) {
   return length;
 }
 
-std::string utf8_char_at(const std::string &str, int index) {
+std::string utf8_char_at(const std::string& str, int index) {
   int current_index = 0;
   for (size_t i = 0; i < str.length(); i++) {
     if ((str[i] & 0xC0) != 0x80) {
@@ -69,19 +61,15 @@ std::string utf8_char_at(const std::string &str, int index) {
   return "";
 }
 
-bool checkAccess(VMAccessModifier modifier, ObjClass *klass,
-                 const std::string &callerClass) {
-  if (modifier == VMAccessModifier::PUBLIC)
-    return true;
-  if (modifier == VMAccessModifier::PRIVATE)
-    return klass->name == callerClass;
+bool checkAccess(VMAccessModifier modifier, ObjClass* klass,
+                 const std::string& callerClass) {
+  if (modifier == VMAccessModifier::PUBLIC) return true;
+  if (modifier == VMAccessModifier::PRIVATE) return klass->name == callerClass;
   if (modifier == VMAccessModifier::PROTECTED) {
-    if (klass->name == callerClass)
-      return true;
+    if (klass->name == callerClass) return true;
     auto current = klass;
     while (current) {
-      if (current->name == callerClass)
-        return true;
+      if (current->name == callerClass) return true;
       current = current->superclass;
     }
     return false;
@@ -89,9 +77,9 @@ bool checkAccess(VMAccessModifier modifier, ObjClass *klass,
   return true;
 }
 
-ObjUpvalue *VM::captureUpvalue(VMValue *local) {
-  ObjUpvalue *prevUpvalue = nullptr;
-  ObjUpvalue *upvalue = openUpvalues;
+ObjUpvalue* VM::captureUpvalue(VMValue* local) {
+  ObjUpvalue* prevUpvalue = nullptr;
+  ObjUpvalue* upvalue = openUpvalues;
   while (upvalue != nullptr && upvalue->location > local) {
     prevUpvalue = upvalue;
     upvalue = upvalue->next;
@@ -113,7 +101,7 @@ ObjUpvalue *VM::captureUpvalue(VMValue *local) {
   return createdUpvalue;
 }
 
-void VM::closeUpvalues(VMValue *last) {
+void VM::closeUpvalues(VMValue* last) {
   while (openUpvalues != nullptr && openUpvalues->location >= last) {
     auto upvalue = openUpvalues;
     upvalue->closed = *upvalue->location;
@@ -122,6 +110,6 @@ void VM::closeUpvalues(VMValue *last) {
   }
 }
 
-void VM::defineNative(const std::string &name, int arity, NativeFn function) {
+void VM::defineNative(const std::string& name, int arity, NativeFn function) {
   globals[name] = new ObjNative(name, arity, function);
 }

@@ -1,9 +1,4 @@
 #include "Net.h"
-#include "../StdLib.h"
-#include <cstring>
-#include <iostream>
-#include <string>
-#include <vector>
 
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
@@ -11,11 +6,18 @@
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/ssl.h>
 
+#include <cstring>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include "../StdLib.h"
+
 namespace StdLib {
 namespace Net {
 
-static bool parseUrl(const std::string &url, std::string &host, int &port,
-                     std::string &path) {
+static bool parseUrl(const std::string& url, std::string& host, int& port,
+                     std::string& path) {
   size_t pos = 0;
   if (url.find("http://") == 0) {
     pos = 7;
@@ -53,9 +55,9 @@ static bool parseUrl(const std::string &url, std::string &host, int &port,
 static mbedtls_x509_crt cacert;
 static bool is_psa_initialized = false;
 
-static std::string makeHttpRequest(const std::string &host, int port,
-                                   const std::string &requestStr, bool &success,
-                                   std::string &errorMsg) {
+static std::string makeHttpRequest(const std::string& host, int port,
+                                   const std::string& requestStr, bool& success,
+                                   std::string& errorMsg) {
   if (!is_psa_initialized) {
     psa_crypto_init();
     mbedtls_x509_crt_init(&cacert);
@@ -85,7 +87,7 @@ static std::string makeHttpRequest(const std::string &host, int port,
     mbedtls_entropy_init(&entropy);
 
     if (mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                              (const unsigned char *)"trypillia", 9) != 0 ||
+                              (const unsigned char*)"trypillia", 9) != 0 ||
         mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT,
                                     MBEDTLS_SSL_TRANSPORT_STREAM,
                                     MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
@@ -117,13 +119,13 @@ static std::string makeHttpRequest(const std::string &host, int port,
       }
     }
 
-    mbedtls_ssl_write(&ssl, (const unsigned char *)requestStr.c_str(),
+    mbedtls_ssl_write(&ssl, (const unsigned char*)requestStr.c_str(),
                       requestStr.length());
 
     std::string response;
     unsigned char buf[4096];
     while ((ret = mbedtls_ssl_read(&ssl, buf, sizeof(buf))) > 0)
-      response.append((char *)buf, ret);
+      response.append((char*)buf, ret);
 
     mbedtls_ssl_free(&ssl);
     mbedtls_ssl_config_free(&conf);
@@ -133,22 +135,21 @@ static std::string makeHttpRequest(const std::string &host, int port,
     success = true;
     return response;
   } else {
-    mbedtls_net_send(&fd, (const unsigned char *)requestStr.c_str(),
+    mbedtls_net_send(&fd, (const unsigned char*)requestStr.c_str(),
                      requestStr.length());
     std::string response;
     unsigned char buf[4096];
     int ret;
     while ((ret = mbedtls_net_recv(&fd, buf, sizeof(buf))) > 0)
-      response.append((char *)buf, ret);
+      response.append((char*)buf, ret);
     mbedtls_net_free(&fd);
     success = true;
     return response;
   }
 }
 
-static VMValue httpGet(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue httpGet(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string host, path;
   int port;
   if (!parseUrl(args[0].asString()->flatten(), host, port, path))
@@ -159,15 +160,14 @@ static VMValue httpGet(int argCount, VMValue *args) {
   bool success;
   std::string err;
   std::string res = makeHttpRequest(host, port, req, success, err);
-  if (!success)
-    return makeResultErr(currentVM, err);
+  if (!success) return makeResultErr(currentVM, err);
 
   size_t body = res.find("\r\n\r\n");
   return makeResultOk(currentVM,
                       body != std::string::npos ? res.substr(body + 4) : res);
 }
 
-static VMValue httpPost(int argCount, VMValue *args) {
+static VMValue httpPost(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isString())
     return nullptr;
   std::string host, path;
@@ -183,8 +183,7 @@ static VMValue httpPost(int argCount, VMValue *args) {
   bool success;
   std::string err;
   std::string res = makeHttpRequest(host, port, req, success, err);
-  if (!success)
-    return makeResultErr(currentVM, err);
+  if (!success) return makeResultErr(currentVM, err);
 
   size_t body = res.find("\r\n\r\n");
   return makeResultOk(currentVM,
@@ -194,17 +193,17 @@ static VMValue httpPost(int argCount, VMValue *args) {
 struct SocketData {
   mbedtls_net_context fd;
 };
-static void freeSocket(void *data) {
+static void freeSocket(void* data) {
   if (data) {
-    mbedtls_net_free(&((SocketData *)data)->fd);
-    delete (SocketData *)data;
+    mbedtls_net_free(&((SocketData*)data)->fd);
+    delete (SocketData*)data;
   }
 }
 
-static VMValue socketConnect(int argCount, VMValue *args) {
+static VMValue socketConnect(int argCount, VMValue* args) {
   if (argCount != 2 || !args[0].isString() || !args[1].isNumber())
     return nullptr;
-  SocketData *data = new SocketData();
+  SocketData* data = new SocketData();
   mbedtls_net_init(&data->fd);
   if (mbedtls_net_connect(&data->fd, args[0].asString()->flatten().c_str(),
                           std::to_string((int)args[1].asNumber()).c_str(),
@@ -219,10 +218,9 @@ static VMValue socketConnect(int argCount, VMValue *args) {
 }
 
 // TCP Server Support
-static VMValue socketListen(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isNumber())
-    return nullptr;
-  SocketData *data = new SocketData();
+static VMValue socketListen(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isNumber()) return nullptr;
+  SocketData* data = new SocketData();
   mbedtls_net_init(&data->fd);
   if (mbedtls_net_bind(&data->fd, NULL,
                        std::to_string((int)args[0].asNumber()).c_str(),
@@ -236,10 +234,10 @@ static VMValue socketListen(int argCount, VMValue *args) {
   return makeResultOk(currentVM, inst);
 }
 
-static VMValue socketAccept(int argCount, VMValue *args) {
+static VMValue socketAccept(int argCount, VMValue* args) {
   auto inst = args[-1].asInstance();
-  SocketData *data = (SocketData *)inst->nativeData;
-  SocketData *clientData = new SocketData();
+  SocketData* data = (SocketData*)inst->nativeData;
+  SocketData* clientData = new SocketData();
   mbedtls_net_init(&clientData->fd);
   if (mbedtls_net_accept(&data->fd, &clientData->fd, NULL, 0, NULL) != 0) {
     delete clientData;
@@ -251,33 +249,33 @@ static VMValue socketAccept(int argCount, VMValue *args) {
   return clientInst;
 }
 
-static VMValue socketSend(int argCount, VMValue *args) {
+static VMValue socketSend(int argCount, VMValue* args) {
   auto inst = args[-1].asInstance();
-  SocketData *data = (SocketData *)inst->nativeData;
+  SocketData* data = (SocketData*)inst->nativeData;
   std::string p = args[0].asString()->flatten();
   return makeResultOk(
-      currentVM, mbedtls_net_send(&data->fd, (const unsigned char *)p.c_str(),
+      currentVM, mbedtls_net_send(&data->fd, (const unsigned char*)p.c_str(),
                                   p.length()) >= 0);
 }
 
-static VMValue socketRecv(int argCount, VMValue *args) {
+static VMValue socketRecv(int argCount, VMValue* args) {
   auto inst = args[-1].asInstance();
-  SocketData *data = (SocketData *)inst->nativeData;
+  SocketData* data = (SocketData*)inst->nativeData;
   unsigned char buf[4096];
   int ret = mbedtls_net_recv(&data->fd, buf, 4096);
-  return makeResultOk(currentVM, ret > 0 ? std::string((char *)buf, ret) : "");
+  return makeResultOk(currentVM, ret > 0 ? std::string((char*)buf, ret) : "");
 }
 
-static VMValue socketClose(int argCount, VMValue *args) {
+static VMValue socketClose(int argCount, VMValue* args) {
   auto inst = args[-1].asInstance();
   if (inst->nativeData) {
-    mbedtls_net_free(&((SocketData *)inst->nativeData)->fd);
+    mbedtls_net_free(&((SocketData*)inst->nativeData)->fd);
     inst->nativeData = nullptr;
   }
   return makeResultOk(currentVM, true);
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto http = new ObjClass("Http");
   http->statics["get"] = new ObjNative("get", 1, httpGet);
@@ -294,7 +292,7 @@ void registerAll(VM *vm) {
   vm->globals["Socket"] = sock;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol s;
   s.type = "class";
   s.isConst = true;
@@ -303,5 +301,5 @@ void registerSymbols(SymbolTable *scope) {
   s.name = "Socket";
   scope->define(s);
 }
-} // namespace Net
-} // namespace StdLib
+}  // namespace Net
+}  // namespace StdLib

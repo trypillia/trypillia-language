@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace TimeModule {
-void registerSymbols(SymbolTable *scope);
-void registerAll(VM *vm);
-} // namespace TimeModule
-} // namespace StdLib
+void registerSymbols(SymbolTable* scope);
+void registerAll(VM* vm);
+}  // namespace TimeModule
+}  // namespace StdLib
 
 #endif

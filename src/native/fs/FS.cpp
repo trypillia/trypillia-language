@@ -1,24 +1,24 @@
 #include "FS.h"
-#include "../StdLib.h"
+
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 
+#include "../StdLib.h"
+
 namespace StdLib {
 namespace FS {
 
-static void freeFile(void *nativeData) {
-  std::fstream *file = static_cast<std::fstream *>(nativeData);
+static void freeFile(void* nativeData) {
+  std::fstream* file = static_cast<std::fstream*>(nativeData);
   if (file) {
-    if (file->is_open())
-      file->close();
+    if (file->is_open()) file->close();
     delete file;
   }
 }
 
-static VMValue fileOpen(int argCount, VMValue *args) {
-  if (argCount < 1 || argCount > 2 || !args[0].isString())
-    return nullptr;
+static VMValue fileOpen(int argCount, VMValue* args) {
+  if (argCount < 1 || argCount > 2 || !args[0].isString()) return nullptr;
   std::string path = args[0].asString()->flatten();
   std::string mode = "r";
   if (argCount == 2 && args[1].isString()) {
@@ -33,7 +33,7 @@ static VMValue fileOpen(int argCount, VMValue *args) {
   else if (mode == "rw")
     fmode = std::ios_base::in | std::ios_base::out;
 
-  std::fstream *file = new std::fstream(path, fmode);
+  std::fstream* file = new std::fstream(path, fmode);
   if (!file->is_open()) {
     delete file;
     return makeResultErr(currentVM, "Failed to open file: " + path);
@@ -47,17 +47,15 @@ static VMValue fileOpen(int argCount, VMValue *args) {
   return makeResultOk(currentVM, instance);
 }
 
-static VMValue fileRead(int argCount, VMValue *args) {
-  if (argCount != 0)
-    return nullptr;
+static VMValue fileRead(int argCount, VMValue* args) {
+  if (argCount != 0) return nullptr;
   // The implicit "this" receiver is at args[-1] because the VM pushes receiver
   // before args
   VMValue receiver = args[-1];
-  if (!receiver.isInstance())
-    return nullptr;
+  if (!receiver.isInstance()) return nullptr;
 
   auto instance = receiver.asInstance();
-  std::fstream *file = static_cast<std::fstream *>(instance->nativeData);
+  std::fstream* file = static_cast<std::fstream*>(instance->nativeData);
   if (!file || !file->is_open())
     return makeResultErr(currentVM, "File is not open");
 
@@ -66,15 +64,13 @@ static VMValue fileRead(int argCount, VMValue *args) {
   return makeResultOk(currentVM, buffer.str());
 }
 
-static VMValue fileWrite(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return false;
+static VMValue fileWrite(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return false;
   VMValue receiver = args[-1];
-  if (!receiver.isInstance())
-    return false;
+  if (!receiver.isInstance()) return false;
 
   auto instance = receiver.asInstance();
-  std::fstream *file = static_cast<std::fstream *>(instance->nativeData);
+  std::fstream* file = static_cast<std::fstream*>(instance->nativeData);
   if (!file || !file->is_open())
     return makeResultErr(currentVM, "File is not open");
 
@@ -83,31 +79,27 @@ static VMValue fileWrite(int argCount, VMValue *args) {
   return makeResultOk(currentVM, true);
 }
 
-static VMValue fileClose(int argCount, VMValue *args) {
-  if (argCount != 0)
-    return false;
+static VMValue fileClose(int argCount, VMValue* args) {
+  if (argCount != 0) return false;
   VMValue receiver = args[-1];
-  if (!receiver.isInstance())
-    return false;
+  if (!receiver.isInstance()) return false;
 
   auto instance = receiver.asInstance();
-  std::fstream *file = static_cast<std::fstream *>(instance->nativeData);
+  std::fstream* file = static_cast<std::fstream*>(instance->nativeData);
   if (file && file->is_open()) {
     file->close();
   }
   return makeResultOk(currentVM, true);
 }
 
-static VMValue fileExists(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return false;
+static VMValue fileExists(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return false;
   std::string path = args[0].asString()->flatten();
   return std::filesystem::exists(path);
 }
 
-static VMValue fileRemove(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return false;
+static VMValue fileRemove(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return false;
   std::string path = args[0].asString()->flatten();
   if (std::filesystem::exists(path)) {
     return std::filesystem::remove(path);
@@ -115,7 +107,7 @@ static VMValue fileRemove(int argCount, VMValue *args) {
   return false;
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto fileClass = new ObjClass("File");
   fileClass->statics["open"] = new ObjNative("open", -1, fileOpen);
@@ -129,7 +121,7 @@ void registerAll(VM *vm) {
   vm->globals["File"] = fileClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "File";
   sym.type = "class";
@@ -137,5 +129,5 @@ void registerSymbols(SymbolTable *scope) {
   scope->define(sym);
 }
 
-} // namespace FS
-} // namespace StdLib
+}  // namespace FS
+}  // namespace StdLib

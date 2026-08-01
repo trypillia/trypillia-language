@@ -1,71 +1,62 @@
 #include "List.h"
+
 #include <algorithm>
 #include <string>
 
 namespace StdLib {
 namespace ListModule {
 
-static VMValue listLength(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isList())
-    return nullptr;
+static VMValue listLength(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isList()) return nullptr;
   return (double)args[0].asList()->elements.size();
 }
 
-static VMValue listPush(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isList())
-    return nullptr;
+static VMValue listPush(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
   list->elements.push_back(args[1]);
   return args[0];
 }
 
-static VMValue listPop(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isList())
-    return nullptr;
+static VMValue listPop(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
-  if (list->elements.empty())
-    return nullptr;
+  if (list->elements.empty()) return nullptr;
   VMValue last = list->elements.back();
   list->elements.pop_back();
   return last;
 }
 
-static VMValue listInsert(int argCount, VMValue *args) {
-  if (argCount != 3 || !args[0].isList() || !args[1].isNumber())
-    return nullptr;
+static VMValue listInsert(int argCount, VMValue* args) {
+  if (argCount != 3 || !args[0].isList() || !args[1].isNumber()) return nullptr;
   auto list = args[0].asList();
   int index = args[1].asNumber();
-  if (index < 0 || index > list->elements.size())
-    return nullptr;
+  if (index < 0 || index > list->elements.size()) return nullptr;
 
   list->elements.insert(list->elements.begin() + index, args[2]);
   return args[0];
 }
 
-static VMValue listRemove(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isList() || !args[1].isNumber())
-    return nullptr;
+static VMValue listRemove(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isList() || !args[1].isNumber()) return nullptr;
   auto list = args[0].asList();
   int index = args[1].asNumber();
-  if (index < 0 || index >= list->elements.size())
-    return nullptr;
+  if (index < 0 || index >= list->elements.size()) return nullptr;
 
   VMValue removed = list->elements[index];
   list->elements.erase(list->elements.begin() + index);
   return removed;
 }
 
-static VMValue listReverse(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isList())
-    return nullptr;
+static VMValue listReverse(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
   std::reverse(list->elements.begin(), list->elements.end());
   return args[0];
 }
 
-static VMValue listJoin(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isList() || !args[1].isString())
-    return nullptr;
+static VMValue listJoin(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isList() || !args[1].isString()) return nullptr;
   auto list = args[0].asList();
   std::string delim = args[1].asString()->flatten();
 
@@ -74,7 +65,7 @@ static VMValue listJoin(int argCount, VMValue *args) {
     if (list->elements[i].isString()) {
       result += list->elements[i].asString()->flatten();
     } else if (list->elements[i].isNumber()) {
-      result += std::to_string(list->elements[i].asNumber()); // Basic cast
+      result += std::to_string(list->elements[i].asNumber());  // Basic cast
     }
     // More types can be converted...
 
@@ -85,9 +76,8 @@ static VMValue listJoin(int argCount, VMValue *args) {
   return result;
 }
 
-static VMValue listMap(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isList())
-    return nullptr;
+static VMValue listMap(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
   VMValue closure = args[1];
 
@@ -102,9 +92,8 @@ static VMValue listMap(int argCount, VMValue *args) {
   return new ObjList(result);
 }
 
-static VMValue listFilter(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isList())
-    return nullptr;
+static VMValue listFilter(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
   VMValue closure = args[1];
 
@@ -126,9 +115,8 @@ static VMValue listFilter(int argCount, VMValue *args) {
   return new ObjList(result);
 }
 
-static VMValue listForEach(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isList())
-    return nullptr;
+static VMValue listForEach(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isList()) return nullptr;
   auto list = args[0].asList();
   VMValue closure = args[1];
 
@@ -139,7 +127,7 @@ static VMValue listForEach(int argCount, VMValue *args) {
   return nullptr;
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto listClass = new ObjClass("List");
 
@@ -157,12 +145,12 @@ void registerAll(VM *vm) {
   vm->globals["List"] = listClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "List";
   sym.type = "class";
   sym.isConst = true;
   scope->define(sym);
 }
-} // namespace ListModule
-} // namespace StdLib
+}  // namespace ListModule
+}  // namespace StdLib

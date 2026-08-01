@@ -1,9 +1,5 @@
 #include "Worker.h"
-#include "../../frontend/lexer/Lexer.h"
-#include "../../frontend/parser/Parser.h"
-#include "../../frontend/semantic/SemanticAnalyzer.h"
-#include "../../vm/compiler/BytecodeCompiler.h"
-#include "../StdLib.h"
+
 #include <condition_variable>
 #include <fstream>
 #include <mutex>
@@ -11,6 +7,12 @@
 #include <sstream>
 #include <string>
 #include <thread>
+
+#include "../../frontend/lexer/Lexer.h"
+#include "../../frontend/parser/Parser.h"
+#include "../../frontend/semantic/SemanticAnalyzer.h"
+#include "../../vm/compiler/BytecodeCompiler.h"
+#include "../StdLib.h"
 
 namespace StdLib {
 namespace WorkerModule {
@@ -54,7 +56,7 @@ static void workerThreadEntry(std::string scriptPath,
 
   Lexer lexer(source);
   Parser parser(lexer);
-  ASTNode *ast = parser.parse();
+  ASTNode* ast = parser.parse();
 
   SemanticAnalyzer semanticAnalyzer;
   semanticAnalyzer.analyze(ast);
@@ -71,7 +73,7 @@ static void workerThreadEntry(std::string scriptPath,
   channel->wtmCond.notify_all();
 }
 
-static VMValue workerCreate(int argCount, VMValue *args) {
+static VMValue workerCreate(int argCount, VMValue* args) {
   if (argCount != 1 || !args[0].isString())
     return makeResultErr(currentVM, "Expected script path");
   std::string path = args[0].asString()->flatten();
@@ -79,30 +81,28 @@ static VMValue workerCreate(int argCount, VMValue *args) {
   auto klass = currentVM->globals["Worker"].asClass();
   auto instance = new ObjInstance(klass);
 
-  WorkerData *data = new WorkerData();
+  WorkerData* data = new WorkerData();
   data->channel = std::make_shared<WorkerChannel>();
   data->thread = std::thread(workerThreadEntry, path, data->channel);
 
   instance->nativeData = data;
-  instance->freeFn = [](void *ptr) {
-    WorkerData *d = static_cast<WorkerData *>(ptr);
+  instance->freeFn = [](void* ptr) {
+    WorkerData* d = static_cast<WorkerData*>(ptr);
     d->channel->isAlive = false;
     d->channel->mtwCond.notify_all();
-    if (d->thread.joinable())
-      d->thread.join();
+    if (d->thread.joinable()) d->thread.join();
     delete d;
   };
 
   return makeResultOk(currentVM, instance);
 }
 
-static VMValue workerSend(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue workerSend(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
 
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
-  WorkerData *data = static_cast<WorkerData *>(instance->nativeData);
+  WorkerData* data = static_cast<WorkerData*>(instance->nativeData);
 
   if (!data || !data->channel->isAlive)
     return makeResultErr(currentVM, "Worker is dead");
@@ -114,16 +114,14 @@ static VMValue workerSend(int argCount, VMValue *args) {
   return makeResultOk(currentVM, true);
 }
 
-static VMValue workerReceive(int argCount, VMValue *args) {
-  if (argCount != 0)
-    return nullptr;
+static VMValue workerReceive(int argCount, VMValue* args) {
+  if (argCount != 0) return nullptr;
 
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
-  WorkerData *data = static_cast<WorkerData *>(instance->nativeData);
+  WorkerData* data = static_cast<WorkerData*>(instance->nativeData);
 
-  if (!data)
-    return makeResultErr(currentVM, "Invalid worker");
+  if (!data) return makeResultErr(currentVM, "Invalid worker");
 
   std::unique_lock<std::mutex> lock(data->channel->wtmMutex);
   data->channel->wtmCond.wait(lock, [&data] {
@@ -139,9 +137,8 @@ static VMValue workerReceive(int argCount, VMValue *args) {
   return makeResultErr(currentVM, "Worker terminated");
 }
 
-static VMValue workerSelfSend(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue workerSelfSend(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   if (!currentWorkerChannel)
     return makeResultErr(currentVM, "Not in a worker thread");
 
@@ -152,9 +149,8 @@ static VMValue workerSelfSend(int argCount, VMValue *args) {
   return makeResultOk(currentVM, true);
 }
 
-static VMValue workerSelfReceive(int argCount, VMValue *args) {
-  if (argCount != 0)
-    return nullptr;
+static VMValue workerSelfReceive(int argCount, VMValue* args) {
+  if (argCount != 0) return nullptr;
   if (!currentWorkerChannel)
     return makeResultErr(currentVM, "Not in a worker thread");
 
@@ -173,7 +169,7 @@ static VMValue workerSelfReceive(int argCount, VMValue *args) {
   return makeResultErr(currentVM, "Main channel closed");
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto workerClass = new ObjClass("Worker");
 
@@ -189,7 +185,7 @@ void registerAll(VM *vm) {
   vm->globals["Worker"] = workerClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Worker";
   sym.type = "class";
@@ -197,5 +193,5 @@ void registerSymbols(SymbolTable *scope) {
   scope->define(sym);
 }
 
-} // namespace WorkerModule
-} // namespace StdLib
+}  // namespace WorkerModule
+}  // namespace StdLib

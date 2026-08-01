@@ -1,3 +1,7 @@
+#include <fstream>
+#include <iostream>
+#include <string>
+
 #include "frontend/ast/ASTOptimizer.h"
 #include "frontend/lexer/Lexer.h"
 #include "frontend/parser/Parser.h"
@@ -7,9 +11,6 @@
 #include "vm/core/VM.h"
 #include "vm/coverage/LcovReporter.h"
 #include "vm/serializer/Serializer.h"
-#include <fstream>
-#include <iostream>
-#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -21,7 +22,7 @@
 #endif
 #endif
 
-std::string getExecutablePath(const char *argv0) {
+std::string getExecutablePath(const char* argv0) {
 #ifdef _WIN32
   char buffer[MAX_PATH];
   GetModuleFileNameA(NULL, buffer, MAX_PATH);
@@ -43,14 +44,13 @@ std::string getExecutablePath(const char *argv0) {
 #endif
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   VM vm;
   std::string command;
-  if (argc >= 2)
-    command = argv[1];
+  if (argc >= 2) command = argv[1];
 
   std::string exePath = getExecutablePath(argv[0]);
-  ObjFunction *function = nullptr;
+  ObjFunction* function = nullptr;
 
   // 1. Check for embedded bytecode first (standalone executable)
   function = Serializer::loadEmbeddedBytecode(exePath);
@@ -115,20 +115,19 @@ int main(int argc, char **argv) {
 
   Lexer lexer(sourceCode);
   Parser parser(lexer);
-  ASTNode *ast = parser.parse();
+  ASTNode* ast = parser.parse();
 
   ASTOptimizer::optimize(ast);
 
   SemanticAnalyzer semanticAnalyzer;
   semanticAnalyzer.currentFilename = inputFile;
-  SymbolTable *globals = semanticAnalyzer.analyze(ast);
+  SymbolTable* globals = semanticAnalyzer.analyze(ast);
 
   Compiler compiler;
   compiler.currentFilename = inputFile;
   function = compiler.compile(ast, globals);
 
-  if (globals)
-    delete globals;
+  if (globals) delete globals;
 
   if (function) {
     if (buildStandalone) {

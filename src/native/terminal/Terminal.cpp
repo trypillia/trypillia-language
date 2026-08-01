@@ -1,6 +1,8 @@
 #include "Terminal.h"
-#include <iostream>
+
 #include <signal.h>
+
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -25,8 +27,7 @@ static struct termios orig_termios;
 static bool inRaw = false;
 
 static void restore() {
-  if (!inRaw)
-    return;
+  if (!inRaw) return;
 #ifdef _WIN32
   SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), orig_in);
   SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), orig_out);
@@ -36,9 +37,8 @@ static void restore() {
   inRaw = false;
 }
 
-static VMValue terminalEnableRawMode(int argCount, VMValue *args) {
-  if (inRaw)
-    return nullptr;
+static VMValue terminalEnableRawMode(int argCount, VMValue* args) {
+  if (inRaw) return nullptr;
 #ifdef _WIN32
   HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -57,7 +57,7 @@ static VMValue terminalEnableRawMode(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue terminalReadChar(int argCount, VMValue *args) {
+static VMValue terminalReadChar(int argCount, VMValue* args) {
 #ifdef _WIN32
   INPUT_RECORD ir;
   DWORD n;
@@ -65,26 +65,24 @@ static VMValue terminalReadChar(int argCount, VMValue *args) {
          n > 0) {
     if (ir.EventType == KEY_EVENT && ir.Event.KeyEvent.bKeyDown) {
       char c = ir.Event.KeyEvent.uChar.AsciiChar;
-      if (c)
-        return std::string(1, c);
+      if (c) return std::string(1, c);
     }
   }
 #else
   char c;
-  if (read(STDIN_FILENO, &c, 1) == 1)
-    return std::string(1, c);
+  if (read(STDIN_FILENO, &c, 1) == 1) return std::string(1, c);
 #endif
   return nullptr;
 }
 
-static VMValue terminalWrite(int argCount, VMValue *args) {
+static VMValue terminalWrite(int argCount, VMValue* args) {
   if (argCount == 1 && args[0].isString()) {
     std::cout << args[0].asString()->flatten() << std::flush;
   }
   return nullptr;
 }
 
-static VMValue terminalColor(int argCount, VMValue *args) {
+static VMValue terminalColor(int argCount, VMValue* args) {
   if (argCount == 1 && args[0].isString()) {
     std::string color = args[0].asString()->flatten();
     std::string code = "";
@@ -114,17 +112,17 @@ static VMValue terminalColor(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue terminalReset(int argCount, VMValue *args) {
+static VMValue terminalReset(int argCount, VMValue* args) {
   std::cout << "\033[0m" << std::flush;
   return nullptr;
 }
 
-static VMValue terminalClear(int argCount, VMValue *args) {
+static VMValue terminalClear(int argCount, VMValue* args) {
   std::cout << "\033[2J\033[H" << std::flush;
   return nullptr;
 }
 
-static VMValue terminalSetCursor(int argCount, VMValue *args) {
+static VMValue terminalSetCursor(int argCount, VMValue* args) {
   if (argCount == 2 && args[0].isNumber() && args[1].isNumber()) {
     int x = static_cast<int>(args[0].asNumber());
     int y = static_cast<int>(args[1].asNumber());
@@ -133,7 +131,7 @@ static VMValue terminalSetCursor(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue terminalGetCursor(int argCount, VMValue *args) {
+static VMValue terminalGetCursor(int argCount, VMValue* args) {
   auto list = new ObjList(std::vector<VMValue>{});
 #ifdef _WIN32
   CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -152,8 +150,7 @@ static VMValue terminalGetCursor(int argCount, VMValue *args) {
   std::string response;
   char c;
   while (read(STDIN_FILENO, &c, 1) == 1) {
-    if (c == 'R')
-      break;
+    if (c == 'R') break;
     response += c;
   }
 
@@ -172,13 +169,13 @@ static VMValue terminalGetCursor(int argCount, VMValue *args) {
   return list;
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto cls = new ObjClass("Terminal");
   cls->statics["enableRawMode"] =
       new ObjNative("enableRawMode", 0, terminalEnableRawMode);
   cls->statics["disableRawMode"] =
-      new ObjNative("disableRawMode", 0, [](int, VMValue *) {
+      new ObjNative("disableRawMode", 0, [](int, VMValue*) {
         restore();
         return (VMValue) nullptr;
       });
@@ -192,12 +189,12 @@ void registerAll(VM *vm) {
   vm->globals["Terminal"] = cls;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol s;
   s.name = "Terminal";
   s.type = "class";
   s.isConst = true;
   scope->define(s);
 }
-} // namespace TerminalModule
-} // namespace StdLib
+}  // namespace TerminalModule
+}  // namespace StdLib

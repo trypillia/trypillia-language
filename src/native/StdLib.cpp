@@ -1,6 +1,7 @@
 #include "core/Core.h"
 #include "crypto/Crypto.h"
 #include "fs/FS.h"
+#include "json/Json.h"
 #include "list/List.h"
 #include "map/Map.h"
 #include "math/Math.h"
@@ -15,10 +16,9 @@
 #include "test/Test.h"
 #include "time/Time.h"
 #include "worker/Worker.h"
-#include "json/Json.h"
 
 namespace StdLib {
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   Core::registerAll(vm);
   Math::registerAll(vm);
   FS::registerAll(vm);
@@ -39,7 +39,7 @@ void registerAll(VM *vm) {
   PromiseModule::registerAll(vm);
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Core::registerSymbols(scope);
   Math::registerSymbols(scope);
   FS::registerSymbols(scope);
@@ -60,7 +60,7 @@ void registerSymbols(SymbolTable *scope) {
   PromiseModule::registerSymbols(scope);
 }
 
-VMValue makeResultOk(VM *vm, VMValue value) {
+VMValue makeResultOk(VM* vm, VMValue value) {
   auto klass = vm->globals["Result"].asClass();
   auto instance = new ObjInstance(klass);
   instance->fields["value"] = value;
@@ -68,7 +68,7 @@ VMValue makeResultOk(VM *vm, VMValue value) {
   return instance;
 }
 
-VMValue makeResultErr(VM *vm, const std::string &message, double code) {
+VMValue makeResultErr(VM* vm, const std::string& message, double code) {
   auto errClass = vm->globals["Error"].asClass();
   auto errInst = new ObjInstance(errClass);
   errInst->fields["message"] = VMValue(message);
@@ -80,4 +80,4 @@ VMValue makeResultErr(VM *vm, const std::string &message, double code) {
   resInst->fields["isOk"] = false;
   return resInst;
 }
-} // namespace StdLib
+}  // namespace StdLib

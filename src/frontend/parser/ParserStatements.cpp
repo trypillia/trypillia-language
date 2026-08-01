@@ -1,10 +1,11 @@
-#include "../../utils/ErrorHandling.h"
-#include "../ast/AST.h"
-#include "Parser.h"
 #include <stdexcept>
 #include <vector>
 
-Parser::Parser(Lexer &lexer) : lexer(lexer) { advance(); }
+#include "../../utils/ErrorHandling.h"
+#include "../ast/AST.h"
+#include "Parser.h"
+
+Parser::Parser(Lexer& lexer) : lexer(lexer) { advance(); }
 
 void Parser::advance() {
   previousToken = currentToken;
@@ -43,13 +44,13 @@ bool Parser::match(std::initializer_list<TokenType> types) {
   return false;
 }
 
-ASTNode *Parser::parse() {
-  std::vector<ASTNode *> declarations;
+ASTNode* Parser::parse() {
+  std::vector<ASTNode*> declarations;
   try {
     while (currentToken.type != TokenType::END_OF_FILE) {
       declarations.push_back(declaration());
     }
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     ErrorHandling::reportError("Error while parsing: " + std::string(e.what()));
     // Synchronize to continue parsing despite errors
     synchronize();
@@ -59,38 +60,38 @@ ASTNode *Parser::parse() {
 }
 
 // Primary expressions: literals, identifiers, grouped expressions
-StmtNode *Parser::expressionStatement() {
-  ExprNode *expr = expression();
+StmtNode* Parser::expressionStatement() {
+  ExprNode* expr = expression();
   consume(TokenType::SEMICOLON);
   return new ExpressionStmt(expr);
 }
 
-StmtNode *Parser::loadStatement() {
+StmtNode* Parser::loadStatement() {
   Token filename = currentToken;
   consume(TokenType::STRING);
   consume(TokenType::SEMICOLON);
   return new LoadStmt(filename);
 }
 
-StmtNode *Parser::block() {
-  std::vector<StmtNode *> statements;
+StmtNode* Parser::block() {
+  std::vector<StmtNode*> statements;
 
   while (currentToken.type != TokenType::RBRACE &&
          currentToken.type != TokenType::END_OF_FILE) {
-    statements.push_back(dynamic_cast<StmtNode *>(declaration()));
+    statements.push_back(dynamic_cast<StmtNode*>(declaration()));
   }
 
   consume(TokenType::RBRACE);
   return new BlockStmt(statements);
 }
 
-StmtNode *Parser::ifStatement() {
+StmtNode* Parser::ifStatement() {
   consume(TokenType::LPAREN);
-  ExprNode *condition = expression();
+  ExprNode* condition = expression();
   consume(TokenType::RPAREN);
 
-  StmtNode *thenBranch = statement();
-  StmtNode *elseBranch = nullptr;
+  StmtNode* thenBranch = statement();
+  StmtNode* elseBranch = nullptr;
 
   if (match(TokenType::ELSE)) {
     elseBranch = statement();
@@ -99,27 +100,27 @@ StmtNode *Parser::ifStatement() {
   return new IfStmt(condition, thenBranch, elseBranch);
 }
 
-StmtNode *Parser::whileStatement() {
+StmtNode* Parser::whileStatement() {
   consume(TokenType::LPAREN);
-  ExprNode *condition = expression();
+  ExprNode* condition = expression();
   consume(TokenType::RPAREN);
-  StmtNode *body = statement();
+  StmtNode* body = statement();
 
   return new WhileStmt(condition, body);
 }
 
-StmtNode *Parser::doWhileStatement() {
-  StmtNode *body = statement();
+StmtNode* Parser::doWhileStatement() {
+  StmtNode* body = statement();
   consume(TokenType::WHILE);
   consume(TokenType::LPAREN);
-  ExprNode *condition = expression();
+  ExprNode* condition = expression();
   consume(TokenType::RPAREN);
   consume(TokenType::SEMICOLON);
 
   return new DoWhileStmt(condition, body);
 }
 
-StmtNode *Parser::returnStatement() {
+StmtNode* Parser::returnStatement() {
   Token keyword = currentToken;
   advance();
 
@@ -128,28 +129,28 @@ StmtNode *Parser::returnStatement() {
     return new ReturnStmt(keyword, nullptr);
   }
 
-  ExprNode *value = expression();
+  ExprNode* value = expression();
   consume(TokenType::SEMICOLON);
   return new ReturnStmt(keyword, value);
 }
 
-StmtNode *Parser::breakStatement() {
+StmtNode* Parser::breakStatement() {
   Token keyword = currentToken;
   advance();
   consume(TokenType::SEMICOLON);
   return new BreakStmt(keyword);
 }
 
-StmtNode *Parser::continueStatement() {
+StmtNode* Parser::continueStatement() {
   Token keyword = currentToken;
   advance();
   consume(TokenType::SEMICOLON);
   return new ContinueStmt(keyword);
 }
 
-StmtNode *Parser::switchStatement() {
+StmtNode* Parser::switchStatement() {
   consume(TokenType::LPAREN);
-  ExprNode *expr = expression();
+  ExprNode* expr = expression();
   consume(TokenType::RPAREN);
   consume(TokenType::LBRACE);
 
@@ -158,10 +159,10 @@ StmtNode *Parser::switchStatement() {
   while (currentToken.type != TokenType::RBRACE &&
          currentToken.type != TokenType::END_OF_FILE) {
     if (match(TokenType::CASE)) {
-      ExprNode *value = expression();
+      ExprNode* value = expression();
       consume(TokenType::COLON);
 
-      std::vector<StmtNode *> body;
+      std::vector<StmtNode*> body;
       while (currentToken.type != TokenType::CASE &&
              currentToken.type != TokenType::DEFAULT &&
              currentToken.type != TokenType::RBRACE &&
@@ -173,7 +174,7 @@ StmtNode *Parser::switchStatement() {
     } else if (match(TokenType::DEFAULT)) {
       consume(TokenType::COLON);
 
-      std::vector<StmtNode *> body;
+      std::vector<StmtNode*> body;
       while (currentToken.type != TokenType::CASE &&
              currentToken.type != TokenType::RBRACE &&
              currentToken.type != TokenType::END_OF_FILE) {
@@ -191,10 +192,10 @@ StmtNode *Parser::switchStatement() {
   return new SwitchStmt(expr, cases);
 }
 
-StmtNode *Parser::usingStatement() {
+StmtNode* Parser::usingStatement() {
   consume(TokenType::LPAREN);
 
-  StmtNode *declaration = nullptr;
+  StmtNode* declaration = nullptr;
   if (currentToken.type == TokenType::LET ||
       currentToken.type == TokenType::CONST) {
     bool isConst = (currentToken.type == TokenType::CONST);
@@ -206,7 +207,7 @@ StmtNode *Parser::usingStatement() {
     Token name = currentToken;
     consume(TokenType::IDENTIFIER);
 
-    ExprNode *initializer = nullptr;
+    ExprNode* initializer = nullptr;
     if (match(TokenType::ASSIGN)) {
       initializer = expression();
     } else if (isConst) {
@@ -214,18 +215,18 @@ StmtNode *Parser::usingStatement() {
     }
     declaration = new VarStmt(name, initializer, isConst);
   } else {
-    ExprNode *expr = expression();
+    ExprNode* expr = expression();
     declaration = new ExpressionStmt(expr);
   }
 
   consume(TokenType::RPAREN);
-  StmtNode *body = statement();
+  StmtNode* body = statement();
 
   return new UsingStmt(declaration, body);
 }
 
-StmtNode *Parser::forStatement() {
-  advance(); // consume FOR
+StmtNode* Parser::forStatement() {
+  advance();  // consume FOR
 
   consume(TokenType::LPAREN);
 
@@ -235,56 +236,56 @@ StmtNode *Parser::forStatement() {
     consume(TokenType::IDENTIFIER);
 
     if (match(TokenType::IN)) {
-      ExprNode *iterable = expression();
+      ExprNode* iterable = expression();
       consume(TokenType::RPAREN);
-      StmtNode *body = statement();
+      StmtNode* body = statement();
       return new ForeachStmt(name, iterable, body);
     }
 
     // Regular for with var initializer
-    ExprNode *initExpr = nullptr;
+    ExprNode* initExpr = nullptr;
     if (match(TokenType::ASSIGN)) {
       initExpr = expression();
     }
 
-    StmtNode *initializer = new VarStmt(name, initExpr);
+    StmtNode* initializer = new VarStmt(name, initExpr);
     consume(TokenType::SEMICOLON);
     return finishForLoop(initializer);
   }
 
   // Regular for without var initializer
-  StmtNode *initializer = nullptr;
+  StmtNode* initializer = nullptr;
   if (currentToken.type == TokenType::SEMICOLON) {
-    advance(); // no initializer
+    advance();  // no initializer
   } else {
-    ExprNode *expr = expression();
+    ExprNode* expr = expression();
     initializer = new ExpressionStmt(expr);
   }
   consume(TokenType::SEMICOLON);
   return finishForLoop(initializer);
 }
 
-StmtNode *Parser::finishForLoop(StmtNode *initializer) {
+StmtNode* Parser::finishForLoop(StmtNode* initializer) {
   // Condition (optional, default true)
-  ExprNode *condition = nullptr;
+  ExprNode* condition = nullptr;
   if (currentToken.type != TokenType::SEMICOLON) {
     condition = expression();
   }
   consume(TokenType::SEMICOLON);
 
   // Increment (optional)
-  ExprNode *increment = nullptr;
+  ExprNode* increment = nullptr;
   if (currentToken.type != TokenType::RPAREN) {
     increment = expression();
   }
   consume(TokenType::RPAREN);
 
-  StmtNode *body = statement();
+  StmtNode* body = statement();
 
   return new ForStmt(initializer, condition, increment, body);
 }
 
-StmtNode *Parser::statement() {
+StmtNode* Parser::statement() {
   if (match(TokenType::IF)) {
     return ifStatement();
   }
@@ -334,7 +335,7 @@ StmtNode *Parser::statement() {
 }
 
 // Declaration parsers
-StmtNode *Parser::varDeclaration() {
+StmtNode* Parser::varDeclaration() {
   bool isConst = (currentToken.type == TokenType::CONST);
   consume(isConst ? TokenType::CONST : TokenType::LET);
   if (isConst) {
@@ -344,7 +345,7 @@ StmtNode *Parser::varDeclaration() {
   Token name = currentToken;
   consume(TokenType::IDENTIFIER);
 
-  ExprNode *initializer = nullptr;
+  ExprNode* initializer = nullptr;
   if (match(TokenType::ASSIGN)) {
     initializer = expression();
   } else if (isConst) {
@@ -355,7 +356,7 @@ StmtNode *Parser::varDeclaration() {
   return new VarStmt(name, initializer, isConst);
 }
 
-FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier) {
+FieldDeclNode* Parser::parseFieldDecl(AccessModifier accessModifier) {
   bool isConst = (currentToken.type == TokenType::CONST);
   if (isConst) {
     advance();
@@ -369,7 +370,7 @@ FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier) {
   Token name = currentToken;
   consume(TokenType::IDENTIFIER);
 
-  ExprNode *initializer = nullptr;
+  ExprNode* initializer = nullptr;
   if (currentToken.type == TokenType::ASSIGN) {
     advance();
     initializer = expression();
@@ -381,7 +382,7 @@ FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier) {
   return new FieldDeclNode(name.lexeme, initializer, accessModifier, isConst);
 }
 
-FunctionNode *Parser::parseFunction(AccessModifier accessModifier,
+FunctionNode* Parser::parseFunction(AccessModifier accessModifier,
                                     bool isAbstract, bool isStatic) {
   consume(TokenType::FN);
 
@@ -395,7 +396,7 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier,
     do {
       Token param = currentToken;
       consume(TokenType::IDENTIFIER);
-      ExprNode *defVal = nullptr;
+      ExprNode* defVal = nullptr;
       if (match(TokenType::ASSIGN)) {
         defVal = expression();
       }
@@ -407,7 +408,7 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier,
 
   if (isAbstract) {
     consume(TokenType::SEMICOLON);
-    FunctionNode *node = new FunctionNode(name.lexeme, parameters, {});
+    FunctionNode* node = new FunctionNode(name.lexeme, parameters, {});
     node->accessModifier = accessModifier;
     node->isAbstract = true;
     node->isStatic = isStatic;
@@ -416,22 +417,22 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier,
 
   // Parse function body
   consume(TokenType::LBRACE);
-  std::vector<StmtNode *> body;
+  std::vector<StmtNode*> body;
 
   while (currentToken.type != TokenType::RBRACE &&
          currentToken.type != TokenType::END_OF_FILE) {
-    body.push_back(dynamic_cast<StmtNode *>(declaration()));
+    body.push_back(dynamic_cast<StmtNode*>(declaration()));
   }
 
   consume(TokenType::RBRACE);
 
-  FunctionNode *node = new FunctionNode(name.lexeme, parameters, body);
+  FunctionNode* node = new FunctionNode(name.lexeme, parameters, body);
   node->accessModifier = accessModifier;
   node->isStatic = isStatic;
   return node;
 }
 
-ClassNode *Parser::parseClass() {
+ClassNode* Parser::parseClass() {
   consume(TokenType::CLASS);
 
   Token name = currentToken;
@@ -459,8 +460,8 @@ ClassNode *Parser::parseClass() {
 
   // Parse class body
   consume(TokenType::LBRACE);
-  std::vector<FunctionNode *> methods;
-  std::vector<FieldDeclNode *> fields;
+  std::vector<FunctionNode*> methods;
+  std::vector<FieldDeclNode*> fields;
 
   while (currentToken.type != TokenType::RBRACE &&
          currentToken.type != TokenType::END_OF_FILE) {
@@ -485,10 +486,10 @@ ClassNode *Parser::parseClass() {
     } else if (currentToken.type == TokenType::DESTROY) {
       advance();
       consume(TokenType::LBRACE);
-      std::vector<StmtNode *> body;
+      std::vector<StmtNode*> body;
       while (currentToken.type != TokenType::RBRACE &&
              currentToken.type != TokenType::END_OF_FILE) {
-        body.push_back(dynamic_cast<StmtNode *>(declaration()));
+        body.push_back(dynamic_cast<StmtNode*>(declaration()));
       }
       consume(TokenType::RBRACE);
       auto node = new FunctionNode("destroy", {}, body);
@@ -524,7 +525,7 @@ ClassNode *Parser::parseClass() {
   return node;
 }
 
-InterfaceNode *Parser::parseInterface() {
+InterfaceNode* Parser::parseInterface() {
   Token name = currentToken;
   consume(TokenType::IDENTIFIER);
 
@@ -540,7 +541,7 @@ InterfaceNode *Parser::parseInterface() {
   }
 
   consume(TokenType::LBRACE);
-  std::vector<FunctionNode *> methods;
+  std::vector<FunctionNode*> methods;
 
   while (currentToken.type != TokenType::RBRACE &&
          currentToken.type != TokenType::END_OF_FILE) {
@@ -556,7 +557,7 @@ InterfaceNode *Parser::parseInterface() {
         do {
           Token param = currentToken;
           consume(TokenType::IDENTIFIER);
-          ExprNode *defVal = nullptr;
+          ExprNode* defVal = nullptr;
           if (match(TokenType::ASSIGN)) {
             defVal = expression();
           }
@@ -578,7 +579,7 @@ InterfaceNode *Parser::parseInterface() {
   return new InterfaceNode(name.lexeme, methods, parentNames);
 }
 
-TraitNode *Parser::parseTrait() {
+TraitNode* Parser::parseTrait() {
   Token name = currentToken;
   consume(TokenType::IDENTIFIER);
 
@@ -593,7 +594,7 @@ TraitNode *Parser::parseTrait() {
   }
 
   consume(TokenType::LBRACE);
-  std::vector<FunctionNode *> methods;
+  std::vector<FunctionNode*> methods;
 
   while (currentToken.type != TokenType::RBRACE &&
          currentToken.type != TokenType::END_OF_FILE) {
@@ -609,7 +610,7 @@ TraitNode *Parser::parseTrait() {
         do {
           Token param = currentToken;
           consume(TokenType::IDENTIFIER);
-          ExprNode *defVal = nullptr;
+          ExprNode* defVal = nullptr;
           if (match(TokenType::ASSIGN)) {
             defVal = expression();
           }
@@ -627,10 +628,10 @@ TraitNode *Parser::parseTrait() {
       } else {
         // Method with body
         consume(TokenType::LBRACE);
-        std::vector<StmtNode *> body;
+        std::vector<StmtNode*> body;
         while (currentToken.type != TokenType::RBRACE &&
                currentToken.type != TokenType::END_OF_FILE) {
-          body.push_back(dynamic_cast<StmtNode *>(declaration()));
+          body.push_back(dynamic_cast<StmtNode*>(declaration()));
         }
         consume(TokenType::RBRACE);
         auto method = new FunctionNode(methodName.lexeme, parameters, body);
@@ -645,7 +646,7 @@ TraitNode *Parser::parseTrait() {
   return new TraitNode(name.lexeme, methods, parentNames);
 }
 
-ASTNode *Parser::declaration() {
+ASTNode* Parser::declaration() {
   if (currentToken.type == TokenType::NAMESPACE) {
     advance();
     return parseNamespaceDeclaration();
@@ -702,22 +703,22 @@ void Parser::synchronize() {
     }
 
     switch (currentToken.type) {
-    case TokenType::CLASS:
-    case TokenType::FN:
-    case TokenType::LET:
-    case TokenType::IF:
-    case TokenType::WHILE:
-    case TokenType::LOAD:
-      return;
-    default:
-      break;
+      case TokenType::CLASS:
+      case TokenType::FN:
+      case TokenType::LET:
+      case TokenType::IF:
+      case TokenType::WHILE:
+      case TokenType::LOAD:
+        return;
+      default:
+        break;
     }
 
     advance();
   }
 }
 
-StmtNode *Parser::parseNamespaceDeclaration() {
+StmtNode* Parser::parseNamespaceDeclaration() {
   Token nameToken = currentToken;
   std::string ns = "";
   do {
@@ -739,7 +740,7 @@ StmtNode *Parser::parseNamespaceDeclaration() {
   return new NamespaceStmt(nsToken);
 }
 
-StmtNode *Parser::parseUseStatement() {
+StmtNode* Parser::parseUseStatement() {
   Token nameToken = currentToken;
   std::string fqn = "";
   std::string lastId = "";

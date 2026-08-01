@@ -1,45 +1,45 @@
 #include "SemanticAnalyzer.h"
-#include "../../native/StdLib.h"
-#include "../../utils/ErrorHandling.h"
-#include "../lexer/Lexer.h"
-#include "../parser/Parser.h"
-#include "../symbol/SymbolTable.h"
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <stdexcept>
 
+#include "../../native/StdLib.h"
+#include "../../utils/ErrorHandling.h"
+#include "../lexer/Lexer.h"
+#include "../parser/Parser.h"
+#include "../symbol/SymbolTable.h"
+
 class SemanticVisitor : public ASTVisitor {
-public:
+ public:
   std::string currentFilename = "";
 
-private:
-  SymbolTable *currentScope;
+ private:
+  SymbolTable* currentScope;
   std::string currentNamespace = "";
   std::map<std::string, std::string> useAliases;
 
-  std::string resolveName(const std::string &name) {
+  std::string resolveName(const std::string& name) {
     if (useAliases.find(name) != useAliases.end()) {
       return useAliases[name];
     }
     if (!currentNamespace.empty() && name.find('.') == std::string::npos) {
       // Check if it exists in current namespace
       std::string fullPath = currentNamespace + "." + name;
-      if (currentScope->resolve(fullPath))
-        return fullPath;
+      if (currentScope->resolve(fullPath)) return fullPath;
 
       // Fallback to global if it doesn't exist in namespace but exists in root
-      if (currentScope->resolve(name))
-        return name;
+      if (currentScope->resolve(name)) return name;
 
-      return fullPath; // Default to namespace for error reporting
+      return fullPath;  // Default to namespace for error reporting
     }
     return name;
   }
 
-public:
-  SemanticVisitor(SymbolTable *scope) : currentScope(scope) {
+ public:
+  SemanticVisitor(SymbolTable* scope) : currentScope(scope) {
     StdLib::registerSymbols(currentScope);
   }
 
@@ -47,33 +47,33 @@ public:
     // Parent scopes are deleted by the owner of the root SymbolTable
   }
 
-  void visit(ProgramNode *node) override {
-    for (auto &decl : node->declarations) {
+  void visit(ProgramNode* node) override {
+    for (auto& decl : node->declarations) {
       decl->accept(this);
     }
   }
 
-  void visit(BinaryExpr *node) override {
+  void visit(BinaryExpr* node) override {
     node->left->accept(this);
     node->right->accept(this);
   }
 
-  void visit(LiteralExpr *node) override {}
+  void visit(LiteralExpr* node) override {}
 
-  void visit(VariableExpr *node) override {
+  void visit(VariableExpr* node) override {
     std::string name = resolveName(node->name.lexeme);
-    Symbol *symbol = currentScope->resolve(name);
+    Symbol* symbol = currentScope->resolve(name);
     if (!symbol) {
       std::string error = "Undefined variable '" + node->name.lexeme + "'";
       ErrorHandling::reportError(error);
     }
   }
 
-  void visit(AssignExpr *node) override {
+  void visit(AssignExpr* node) override {
     node->value->accept(this);
 
     std::string name = resolveName(node->name.lexeme);
-    Symbol *symbol = currentScope->resolve(name);
+    Symbol* symbol = currentScope->resolve(name);
     if (!symbol) {
       std::string error = "Undefined variable '" + node->name.lexeme + "'";
       ErrorHandling::reportError(error);
@@ -84,11 +84,11 @@ public:
     }
   }
 
-  void visit(CompoundAssignExpr *node) override {
+  void visit(CompoundAssignExpr* node) override {
     node->value->accept(this);
 
     std::string name = resolveName(node->name.lexeme);
-    Symbol *symbol = currentScope->resolve(name);
+    Symbol* symbol = currentScope->resolve(name);
     if (!symbol) {
       std::string error = "Undefined variable '" + node->name.lexeme + "'";
       ErrorHandling::reportError(error);
@@ -99,16 +99,16 @@ public:
     }
   }
 
-  void visit(UnaryExpr *node) override {
+  void visit(UnaryExpr* node) override {
     if (node->op.type == TokenType::PLUS_PLUS ||
         node->op.type == TokenType::MINUS_MINUS) {
-      VariableExpr *var = dynamic_cast<VariableExpr *>(node->right);
+      VariableExpr* var = dynamic_cast<VariableExpr*>(node->right);
       if (!var) {
         ErrorHandling::reportError("Invalid prefix expression target");
         return;
       }
       std::string name = resolveName(var->name.lexeme);
-      Symbol *symbol = currentScope->resolve(name);
+      Symbol* symbol = currentScope->resolve(name);
       if (!symbol) {
         std::string error = "Undefined variable '" + var->name.lexeme + "'";
         ErrorHandling::reportError(error);
@@ -122,9 +122,9 @@ public:
     node->right->accept(this);
   }
 
-  void visit(PostfixExpr *node) override {
+  void visit(PostfixExpr* node) override {
     std::string name = resolveName(node->name.lexeme);
-    Symbol *symbol = currentScope->resolve(name);
+    Symbol* symbol = currentScope->resolve(name);
     if (!symbol) {
       std::string error = "Undefined variable '" + node->name.lexeme + "'";
       ErrorHandling::reportError(error);
@@ -135,60 +135,60 @@ public:
     }
   }
 
-  void visit(TernaryExpr *node) override {
+  void visit(TernaryExpr* node) override {
     node->condition->accept(this);
     node->thenBranch->accept(this);
     node->elseBranch->accept(this);
   }
 
-  void visit(ListExpr *node) override {
-    for (auto *el : node->elements) {
+  void visit(ListExpr* node) override {
+    for (auto* el : node->elements) {
       el->accept(this);
     }
   }
 
-  void visit(IndexGetExpr *node) override {
+  void visit(IndexGetExpr* node) override {
     node->object->accept(this);
     node->index->accept(this);
   }
 
-  void visit(IndexSetExpr *node) override {
+  void visit(IndexSetExpr* node) override {
     node->object->accept(this);
     node->index->accept(this);
     node->value->accept(this);
   }
 
-  void visit(ThisExpr *node) override {
-    Symbol *symbol = currentScope->resolve("this");
+  void visit(ThisExpr* node) override {
+    Symbol* symbol = currentScope->resolve("this");
     if (!symbol) {
       ErrorHandling::reportError("'this' can only be used inside a method");
     }
   }
 
-  void visit(SuperExpr *node) override {
-    Symbol *symbol = currentScope->resolve("this");
+  void visit(SuperExpr* node) override {
+    Symbol* symbol = currentScope->resolve("this");
     if (!symbol) {
       ErrorHandling::reportError("'super' can only be used inside a method");
     }
   }
 
-  void visit(GetExpr *node) override { node->object->accept(this); }
+  void visit(GetExpr* node) override { node->object->accept(this); }
 
-  void visit(SetExpr *node) override {
+  void visit(SetExpr* node) override {
     node->object->accept(this);
     node->value->accept(this);
   }
 
-  void visit(CallExpr *node) override {
+  void visit(CallExpr* node) override {
     node->callee->accept(this);
-    for (auto &arg : node->arguments) {
+    for (auto& arg : node->arguments) {
       arg->accept(this);
     }
   }
 
-  void visit(ExpressionStmt *node) override { node->expression->accept(this); }
+  void visit(ExpressionStmt* node) override { node->expression->accept(this); }
 
-  void visit(VarStmt *node) override {
+  void visit(VarStmt* node) override {
     if (node->initializer) {
       node->initializer->accept(this);
     }
@@ -210,53 +210,48 @@ public:
     }
   }
 
-  void visit(BlockStmt *node) override {
-    SymbolTable *enclosingScope = currentScope;
+  void visit(BlockStmt* node) override {
+    SymbolTable* enclosingScope = currentScope;
     currentScope = new SymbolTable(enclosingScope);
-    for (auto &stmt : node->statements) {
+    for (auto& stmt : node->statements) {
       stmt->accept(this);
     }
-    SymbolTable *previous = currentScope;
+    SymbolTable* previous = currentScope;
     currentScope = currentScope->getParent();
     delete previous;
   }
 
-  void visit(IfStmt *node) override {
+  void visit(IfStmt* node) override {
     node->condition->accept(this);
     node->thenBranch->accept(this);
-    if (node->elseBranch)
-      node->elseBranch->accept(this);
+    if (node->elseBranch) node->elseBranch->accept(this);
   }
 
-  void visit(WhileStmt *node) override {
+  void visit(WhileStmt* node) override {
     node->condition->accept(this);
     node->body->accept(this);
   }
 
-  void visit(DoWhileStmt *node) override {
+  void visit(DoWhileStmt* node) override {
     node->body->accept(this);
     node->condition->accept(this);
   }
 
-  void visit(ReturnStmt *node) override {
-    if (node->value)
-      node->value->accept(this);
+  void visit(ReturnStmt* node) override {
+    if (node->value) node->value->accept(this);
   }
 
-  void visit(BreakStmt *node) override {}
-  void visit(ContinueStmt *node) override {}
+  void visit(BreakStmt* node) override {}
+  void visit(ContinueStmt* node) override {}
 
-  void visit(ForStmt *node) override {
-    if (node->initializer)
-      node->initializer->accept(this);
-    if (node->condition)
-      node->condition->accept(this);
-    if (node->increment)
-      node->increment->accept(this);
+  void visit(ForStmt* node) override {
+    if (node->initializer) node->initializer->accept(this);
+    if (node->condition) node->condition->accept(this);
+    if (node->increment) node->increment->accept(this);
     node->body->accept(this);
   }
 
-  void visit(ForeachStmt *node) override {
+  void visit(ForeachStmt* node) override {
     node->iterable->accept(this);
     currentScope = new SymbolTable(currentScope);
     Symbol symbol;
@@ -265,33 +260,31 @@ public:
     symbol.isConst = false;
     currentScope->define(symbol);
     node->body->accept(this);
-    SymbolTable *old = currentScope;
+    SymbolTable* old = currentScope;
     currentScope = currentScope->getParent();
     delete old;
   }
 
-  void visit(SwitchStmt *node) override {
+  void visit(SwitchStmt* node) override {
     node->expression->accept(this);
-    for (auto &caseClause : node->cases) {
-      if (caseClause.value)
-        caseClause.value->accept(this);
-      for (auto &stmt : caseClause.body)
-        stmt->accept(this);
+    for (auto& caseClause : node->cases) {
+      if (caseClause.value) caseClause.value->accept(this);
+      for (auto& stmt : caseClause.body) stmt->accept(this);
     }
   }
 
-  void visit(UsingStmt *node) override {
+  void visit(UsingStmt* node) override {
     currentScope = new SymbolTable(currentScope);
     node->declaration->accept(this);
     node->body->accept(this);
-    SymbolTable *old = currentScope;
+    SymbolTable* old = currentScope;
     currentScope = currentScope->getParent();
     delete old;
   }
 
-  void visit(LambdaExpr *node) override {
+  void visit(LambdaExpr* node) override {
     currentScope = new SymbolTable(currentScope);
-    for (const auto &param : node->params) {
+    for (const auto& param : node->params) {
       if (param.defaultValue) {
         param.defaultValue->accept(this);
       }
@@ -301,14 +294,13 @@ public:
       symbol.isConst = false;
       currentScope->define(symbol);
     }
-    for (auto &stmt : node->body)
-      stmt->accept(this);
-    SymbolTable *old = currentScope;
+    for (auto& stmt : node->body) stmt->accept(this);
+    SymbolTable* old = currentScope;
     currentScope = currentScope->getParent();
     delete old;
   }
 
-  void visit(FunctionNode *node) override {
+  void visit(FunctionNode* node) override {
     std::string actualName = node->name;
     if (!currentNamespace.empty() && node->name != "init" &&
         currentScope->getParent() == nullptr) {
@@ -322,7 +314,7 @@ public:
     currentScope->define(functionSymbol);
 
     currentScope = new SymbolTable(currentScope);
-    for (const auto &param : node->params) {
+    for (const auto& param : node->params) {
       if (param.defaultValue) {
         param.defaultValue->accept(this);
       }
@@ -331,24 +323,22 @@ public:
       paramSymbol.type = "parameter";
       currentScope->define(paramSymbol);
     }
-    for (auto &stmt : node->body)
-      stmt->accept(this);
-    SymbolTable *old = currentScope;
+    for (auto& stmt : node->body) stmt->accept(this);
+    SymbolTable* old = currentScope;
     currentScope = currentScope->getParent();
     delete old;
   }
 
-  void visit(FieldDeclNode *node) override {
+  void visit(FieldDeclNode* node) override {
     Symbol fieldSymbol;
     fieldSymbol.name = node->name;
     fieldSymbol.type = "field";
     fieldSymbol.isConst = node->isConst;
     currentScope->define(fieldSymbol);
-    if (node->initializer)
-      node->initializer->accept(this);
+    if (node->initializer) node->initializer->accept(this);
   }
 
-  void visit(ClassNode *node) override {
+  void visit(ClassNode* node) override {
     std::string actualName = node->name;
     if (!currentNamespace.empty()) {
       actualName = currentNamespace + "." + actualName;
@@ -367,14 +357,12 @@ public:
     thisSymbol.isConst = true;
     currentScope->define(thisSymbol);
 
-    for (auto &field : node->fields)
-      field->accept(this);
-    for (auto &method : node->methods)
-      method->accept(this);
+    for (auto& field : node->fields) field->accept(this);
+    for (auto& method : node->methods) method->accept(this);
     currentScope = currentScope->getParent();
   }
 
-  void visit(InterfaceNode *node) override {
+  void visit(InterfaceNode* node) override {
     std::string actualName = node->name;
     if (!currentNamespace.empty())
       actualName = currentNamespace + "." + actualName;
@@ -392,15 +380,14 @@ public:
     thisSymbol.isConst = true;
     currentScope->define(thisSymbol);
 
-    for (auto &method : node->methods)
-      method->accept(this);
+    for (auto& method : node->methods) method->accept(this);
 
-    SymbolTable *old = currentScope;
+    SymbolTable* old = currentScope;
     currentScope = currentScope->getParent();
     delete old;
   }
 
-  void visit(TraitNode *node) override {
+  void visit(TraitNode* node) override {
     std::string actualName = node->name;
     if (!currentNamespace.empty())
       actualName = currentNamespace + "." + actualName;
@@ -418,19 +405,18 @@ public:
     thisSymbol.isConst = true;
     currentScope->define(thisSymbol);
 
-    for (auto &method : node->methods)
-      method->accept(this);
+    for (auto& method : node->methods) method->accept(this);
 
-    SymbolTable *old = currentScope;
+    SymbolTable* old = currentScope;
     currentScope = currentScope->getParent();
     delete old;
   }
 
-  void visit(StaticGetExpr *node) override {}
-  void visit(StaticCallExpr *node) override {}
-  void visit(StaticSetExpr *node) override {}
+  void visit(StaticGetExpr* node) override {}
+  void visit(StaticCallExpr* node) override {}
+  void visit(StaticSetExpr* node) override {}
 
-  void visit(LoadStmt *node) override {
+  void visit(LoadStmt* node) override {
     std::string path = node->filename.lexeme;
     if (path.size() >= 2 && path.front() == '"' && path.back() == '"') {
       path = path.substr(1, path.size() - 2);
@@ -469,7 +455,7 @@ public:
                        std::istreambuf_iterator<char>());
     Lexer lexer(source);
     Parser parser(lexer);
-    ASTNode *ast = parser.parse();
+    ASTNode* ast = parser.parse();
     if (ast) {
       ast->accept(this);
       delete ast;
@@ -479,26 +465,25 @@ public:
     useAliases = previousUseAliases;
   }
 
-  void visit(DictExpr *node) override {
-    for (auto &pair : node->elements) {
+  void visit(DictExpr* node) override {
+    for (auto& pair : node->elements) {
       pair.first->accept(this);
       pair.second->accept(this);
     }
   }
 
-  void visit(NamespaceStmt *node) override {
+  void visit(NamespaceStmt* node) override {
     this->currentNamespace = node->name.lexeme;
   }
 
-  void visit(UseStmt *node) override {
+  void visit(UseStmt* node) override {
     this->useAliases[node->alias.lexeme] = node->name.lexeme;
   }
 };
 
-SymbolTable *SemanticAnalyzer::analyze(ASTNode *ast) {
-  if (!ast)
-    return nullptr;
-  SymbolTable *globals = new SymbolTable();
+SymbolTable* SemanticAnalyzer::analyze(ASTNode* ast) {
+  if (!ast) return nullptr;
+  SymbolTable* globals = new SymbolTable();
   SemanticVisitor visitor(globals);
   visitor.currentFilename = this->currentFilename;
   ast->accept(&visitor);

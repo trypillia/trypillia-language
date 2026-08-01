@@ -1,20 +1,23 @@
 #include "Crypto.h"
-#include "../StdLib.h"
+
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "../StdLib.h"
+
 namespace StdLib {
 namespace CryptoModule {
 
 // --- Base64 Implementation ---
-static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                        "abcdefghijklmnopqrstuvwxyz"
-                                        "0123456789+/";
+static const std::string base64_chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
 
-static std::string base64_encode(const std::string &in) {
+static std::string base64_encode(const std::string& in) {
   std::string out;
   int val = 0, valb = -6;
   for (uint8_t c : in) {
@@ -25,10 +28,8 @@ static std::string base64_encode(const std::string &in) {
       valb -= 6;
     }
   }
-  if (valb > -6)
-    out.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
-  while (out.size() % 4)
-    out.push_back('=');
+  if (valb > -6) out.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
+  while (out.size() % 4) out.push_back('=');
   return out;
 }
 
@@ -37,7 +38,7 @@ static uint32_t left_rotate(uint32_t value, size_t count) {
   return (value << count) ^ (value >> (32 - count));
 }
 
-static std::string sha1_raw(const std::string &input) {
+static std::string sha1_raw(const std::string& input) {
   uint32_t h0 = 0x67452301;
   uint32_t h1 = 0xEFCDAB89;
   uint32_t h2 = 0x98BADCFE;
@@ -47,8 +48,7 @@ static std::string sha1_raw(const std::string &input) {
   std::string padded = input;
   uint64_t original_length = padded.length() * 8;
   padded += (char)0x80;
-  while ((padded.length() * 8) % 512 != 448)
-    padded += (char)0x00;
+  while ((padded.length() * 8) % 512 != 448) padded += (char)0x00;
 
   for (int i = 7; i >= 0; --i) {
     padded += (char)((original_length >> (i * 8)) & 0xFF);
@@ -108,9 +108,8 @@ static std::string sha1_raw(const std::string &input) {
   return result;
 }
 
-static VMValue cryptoSha1(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue cryptoSha1(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string input = args[0].asString()->flatten();
   std::string raw = sha1_raw(input);
 
@@ -121,22 +120,20 @@ static VMValue cryptoSha1(int argCount, VMValue *args) {
   return makeResultOk(currentVM, hexStream.str());
 }
 
-static VMValue cryptoSha1Base64(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue cryptoSha1Base64(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string input = args[0].asString()->flatten();
   std::string raw = sha1_raw(input);
   return makeResultOk(currentVM, base64_encode(raw));
 }
 
-static VMValue cryptoBase64Encode(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isString())
-    return nullptr;
+static VMValue cryptoBase64Encode(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isString()) return nullptr;
   std::string input = args[0].asString()->flatten();
   return makeResultOk(currentVM, base64_encode(input));
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto cryptoClass = new ObjClass("Crypto");
 
@@ -149,7 +146,7 @@ void registerAll(VM *vm) {
   vm->globals["Crypto"] = cryptoClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Crypto";
   sym.type = "class";
@@ -157,5 +154,5 @@ void registerSymbols(SymbolTable *scope) {
   scope->define(sym);
 }
 
-} // namespace CryptoModule
-} // namespace StdLib
+}  // namespace CryptoModule
+}  // namespace StdLib

@@ -1,21 +1,21 @@
 #include "Core.h"
+
+#include <time.h>
+
 #include <cctype>
 #include <iostream>
-#include <time.h>
 
 namespace StdLib {
 namespace Core {
 
 // currentVM defined in VM.cpp
 
-static std::string stringify(const VMValue &val, bool inContainer = false) {
+static std::string stringify(const VMValue& val, bool inContainer = false) {
   if (val.isNumber()) {
     std::string s = std::to_string(val.asNumber());
     s.erase(s.find_last_not_of('0') + 1, std::string::npos);
-    if (s.back() == '.')
-      s.pop_back();
-    if (s.empty())
-      return "0";
+    if (s.back() == '.') s.pop_back();
+    if (s.empty()) return "0";
     return s;
   } else if (val.isString()) {
     if (inContainer) {
@@ -30,8 +30,7 @@ static std::string stringify(const VMValue &val, bool inContainer = false) {
     auto list = val.asList();
     for (size_t i = 0; i < list->elements.size(); ++i) {
       s += stringify(list->elements[i], true);
-      if (i < list->elements.size() - 1)
-        s += ", ";
+      if (i < list->elements.size() - 1) s += ", ";
     }
     s += "]";
     return s;
@@ -39,10 +38,9 @@ static std::string stringify(const VMValue &val, bool inContainer = false) {
     std::string s = "{";
     auto map = val.asMap();
     size_t i = 0;
-    for (auto const &[k, v] : map->values) {
+    for (auto const& [k, v] : map->values) {
       s += stringify(k, true) + ": " + stringify(v, true);
-      if (i < map->values.size() - 1)
-        s += ", ";
+      if (i < map->values.size() - 1) s += ", ";
       i++;
     }
     s += "}";
@@ -64,17 +62,16 @@ static std::string stringify(const VMValue &val, bool inContainer = false) {
   return "unknown";
 }
 
-static VMValue printNative(int argCount, VMValue *args) {
+static VMValue printNative(int argCount, VMValue* args) {
   for (int i = 0; i < argCount; i++) {
     std::cout << stringify(args[i]);
-    if (i < argCount - 1)
-      std::cout << " ";
+    if (i < argCount - 1) std::cout << " ";
   }
   std::cout << std::endl;
   return nullptr;
 }
 
-static VMValue inputNative(int argCount, VMValue *args) {
+static VMValue inputNative(int argCount, VMValue* args) {
   if (argCount == 1 && args[0].isString()) {
     std::cout << args[0].asString()->flatten();
   }
@@ -84,10 +81,9 @@ static VMValue inputNative(int argCount, VMValue *args) {
 }
 
 // --- Error ---
-static VMValue errorInit(int argCount, VMValue *args) {
+static VMValue errorInit(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
-  if (!receiver.isInstance())
-    return nullptr;
+  if (!receiver.isInstance()) return nullptr;
   auto instance = receiver.asInstance();
 
   instance->fields["message"] =
@@ -97,9 +93,8 @@ static VMValue errorInit(int argCount, VMValue *args) {
 }
 
 // --- Result ---
-static VMValue resultOk(int argCount, VMValue *args) {
-  if (argCount != 1)
-    return nullptr;
+static VMValue resultOk(int argCount, VMValue* args) {
+  if (argCount != 1) return nullptr;
   auto klass = currentVM->globals["Result"].asClass();
   auto instance = new ObjInstance(klass);
   instance->fields["value"] = args[0];
@@ -107,9 +102,8 @@ static VMValue resultOk(int argCount, VMValue *args) {
   return instance;
 }
 
-static VMValue resultErr(int argCount, VMValue *args) {
-  if (argCount != 1)
-    return nullptr;
+static VMValue resultErr(int argCount, VMValue* args) {
+  if (argCount != 1) return nullptr;
   auto klass = currentVM->globals["Result"].asClass();
   auto instance = new ObjInstance(klass);
   instance->fields["error"] = args[0];
@@ -117,47 +111,45 @@ static VMValue resultErr(int argCount, VMValue *args) {
   return instance;
 }
 
-static VMValue resultIsOk(int argCount, VMValue *args) {
+static VMValue resultIsOk(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
   return instance->fields["isOk"];
 }
 
-static VMValue resultIsErr(int argCount, VMValue *args) {
+static VMValue resultIsErr(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
   return !instance->fields["isOk"].asBool();
 }
 
-static VMValue resultUnwrap(int argCount, VMValue *args) {
+static VMValue resultUnwrap(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
   if (!instance->fields["isOk"].asBool()) {
     std::cerr << "Called unwrap() on an Err value!" << std::endl;
-    exit(1); // Panic
+    exit(1);  // Panic
   }
   return instance->fields["value"];
 }
 
-static VMValue resultUnwrapErr(int argCount, VMValue *args) {
+static VMValue resultUnwrapErr(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
   if (instance->fields["isOk"].asBool()) {
     std::cerr << "Called unwrapErr() on an Ok value!" << std::endl;
-    exit(1); // Panic
+    exit(1);  // Panic
   }
   return instance->fields["error"];
 }
 
 // --- WeakRef ---
-static VMValue weakRefInit(int argCount, VMValue *args) {
+static VMValue weakRefInit(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
-  if (!receiver.isInstance())
-    return nullptr;
+  if (!receiver.isInstance()) return nullptr;
   auto instance = receiver.asInstance();
 
-  if (argCount != 1)
-    return nullptr;
+  if (argCount != 1) return nullptr;
 
   auto weakObj = new ObjWeakRef();
   VMValue val = args[0];
@@ -170,11 +162,10 @@ static VMValue weakRefInit(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue weakRefLock(int argCount, VMValue *args) {
+static VMValue weakRefLock(int argCount, VMValue* args) {
   VMValue receiver = args[-1];
   auto instance = receiver.asInstance();
-  if (instance->fields.find("_ref") == instance->fields.end())
-    return nullptr;
+  if (instance->fields.find("_ref") == instance->fields.end()) return nullptr;
 
   auto ref = instance->fields["_ref"];
   if (ref.isWeakRef()) {
@@ -183,7 +174,7 @@ static VMValue weakRefLock(int argCount, VMValue *args) {
   return nullptr;
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   vm->defineNative("print", -1, printNative);
   vm->defineNative("input", -1, inputNative);
@@ -208,8 +199,8 @@ void registerAll(VM *vm) {
   vm->globals["WeakRef"] = weakRefClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
-  auto addFunc = [&](const std::string &name) {
+void registerSymbols(SymbolTable* scope) {
+  auto addFunc = [&](const std::string& name) {
     Symbol sym;
     sym.name = name;
     sym.type = "function";
@@ -219,7 +210,7 @@ void registerSymbols(SymbolTable *scope) {
   addFunc("print");
   addFunc("input");
 
-  auto addClass = [&](const std::string &name) {
+  auto addClass = [&](const std::string& name) {
     Symbol sym;
     sym.name = name;
     sym.type = "class";
@@ -231,5 +222,5 @@ void registerSymbols(SymbolTable *scope) {
   addClass("WeakRef");
 }
 
-} // namespace Core
-} // namespace StdLib
+}  // namespace Core
+}  // namespace StdLib

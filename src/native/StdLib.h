@@ -13,14 +13,14 @@
 
 namespace StdLib {
 // Registers actual functions and objects in the VM
-void registerAll(VM *vm);
+void registerAll(VM* vm);
 
 // Registers symbol names in the compiler's semantic analyzer scope
-void registerSymbols(SymbolTable *scope);
+void registerSymbols(SymbolTable* scope);
 
 // Helpers for returning Result objects
-VMValue makeResultOk(VM *vm, VMValue value);
-VMValue makeResultErr(VM *vm, const std::string &message, double code = 0.0);
-} // namespace StdLib
+VMValue makeResultOk(VM* vm, VMValue value);
+VMValue makeResultErr(VM* vm, const std::string& message, double code = 0.0);
+}  // namespace StdLib
 
 #endif

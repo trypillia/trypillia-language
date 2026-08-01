@@ -6,9 +6,9 @@
 
 namespace StdLib {
 namespace CryptoModule {
-void registerAll(VM *vm);
-void registerSymbols(SymbolTable *scope);
-} // namespace CryptoModule
-} // namespace StdLib
+void registerAll(VM* vm);
+void registerSymbols(SymbolTable* scope);
+}  // namespace CryptoModule
+}  // namespace StdLib
 
 #endif

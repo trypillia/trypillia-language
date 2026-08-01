@@ -3,38 +3,34 @@
 namespace StdLib {
 namespace MapModule {
 
-static VMValue mapKeys(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isMap())
-    return nullptr;
+static VMValue mapKeys(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isMap()) return nullptr;
   auto map = args[0].asMap();
   std::vector<VMValue> keys;
-  for (const auto &pair : map->values) {
+  for (const auto& pair : map->values) {
     keys.push_back(pair.first);
   }
   return new ObjList(keys);
 }
 
-static VMValue mapValues(int argCount, VMValue *args) {
-  if (argCount != 1 || !args[0].isMap())
-    return nullptr;
+static VMValue mapValues(int argCount, VMValue* args) {
+  if (argCount != 1 || !args[0].isMap()) return nullptr;
   auto map = args[0].asMap();
   std::vector<VMValue> values;
-  for (const auto &pair : map->values) {
+  for (const auto& pair : map->values) {
     values.push_back(pair.second);
   }
   return new ObjList(values);
 }
 
-static VMValue mapHas(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isMap())
-    return nullptr;
+static VMValue mapHas(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isMap()) return nullptr;
   auto map = args[0].asMap();
   return map->values.count(args[1]) > 0;
 }
 
-static VMValue mapRemove(int argCount, VMValue *args) {
-  if (argCount != 2 || !args[0].isMap())
-    return nullptr;
+static VMValue mapRemove(int argCount, VMValue* args) {
+  if (argCount != 2 || !args[0].isMap()) return nullptr;
   auto map = args[0].asMap();
   if (map->values.count(args[1]) > 0) {
     VMValue val = map->values[args[1]];
@@ -44,15 +40,14 @@ static VMValue mapRemove(int argCount, VMValue *args) {
   return nullptr;
 }
 
-static VMValue mapSet(int argCount, VMValue *args) {
-  if (argCount != 3 || !args[0].isMap())
-    return nullptr;
+static VMValue mapSet(int argCount, VMValue* args) {
+  if (argCount != 3 || !args[0].isMap()) return nullptr;
   auto map = args[0].asMap();
   map->values[args[1]] = args[2];
   return args[2];
 }
 
-void registerAll(VM *vm) {
+void registerAll(VM* vm) {
   currentVM = vm;
   auto mapClass = new ObjClass("Map");
 
@@ -65,7 +60,7 @@ void registerAll(VM *vm) {
   vm->globals["Map"] = mapClass;
 }
 
-void registerSymbols(SymbolTable *scope) {
+void registerSymbols(SymbolTable* scope) {
   Symbol sym;
   sym.name = "Map";
   sym.type = "class";
@@ -73,5 +68,5 @@ void registerSymbols(SymbolTable *scope) {
   scope->define(sym);
 }
 
-} // namespace MapModule
-} // namespace StdLib
+}  // namespace MapModule
+}  // namespace StdLib
