@@ -21,16 +21,16 @@ jobs:
             cmake_args: ""
             
           # Native macOS Apple Silicon (M1/M2/M3)
-          - os: macos-14
+          - os: macos-latest
             target: macos-arm64
             artifact_name: trypillia
-            cmake_args: ""
+            cmake_args: "-DCMAKE_OSX_ARCHITECTURES=arm64"
             
-          # Native macOS Intel
-          - os: macos-13
+          # Native macOS Intel (Cross-compiled from M1 runner)
+          - os: macos-latest
             target: macos-x86_64
             artifact_name: trypillia
-            cmake_args: ""
+            cmake_args: "-DCMAKE_OSX_ARCHITECTURES=x86_64"
             
           # Native Linux x86_64
           - os: ubuntu-latest
