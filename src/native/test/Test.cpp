@@ -678,6 +678,67 @@ static VMValue fdescribeNative(int argCount, VMValue *args)
     return nullptr;
 }
 
+// --- MockResult ---
+static VMValue mockResultOk(int argCount, VMValue *args)
+{
+    if (argCount != 1)
+        return nullptr;
+    auto klass = currentVM->globals["MockResult"].asClass();
+    auto instance = new ObjInstance(klass);
+    instance->fields["value"] = args[0];
+    instance->fields["isOk"] = true;
+    return instance;
+}
+
+static VMValue mockResultErr(int argCount, VMValue *args)
+{
+    if (argCount != 1)
+        return nullptr;
+    auto klass = currentVM->globals["MockResult"].asClass();
+    auto instance = new ObjInstance(klass);
+    instance->fields["error"] = args[0];
+    instance->fields["isOk"] = false;
+    return instance;
+}
+
+static VMValue mockResultIsOk(int argCount, VMValue *args)
+{
+    VMValue receiver = args[-1];
+    auto instance = receiver.asInstance();
+    return instance->fields["isOk"];
+}
+
+static VMValue mockResultIsErr(int argCount, VMValue *args)
+{
+    VMValue receiver = args[-1];
+    auto instance = receiver.asInstance();
+    return !instance->fields["isOk"].asBool();
+}
+
+static VMValue mockResultUnwrap(int argCount, VMValue *args)
+{
+    VMValue receiver = args[-1];
+    auto instance = receiver.asInstance();
+    if (!instance->fields["isOk"].asBool())
+    {
+        failAssertion(currentVM, "Called unwrap() on an Err value in MockResult!");
+        return nullptr;
+    }
+    return instance->fields["value"];
+}
+
+static VMValue mockResultUnwrapErr(int argCount, VMValue *args)
+{
+    VMValue receiver = args[-1];
+    auto instance = receiver.asInstance();
+    if (instance->fields["isOk"].asBool())
+    {
+        failAssertion(currentVM, "Called unwrapErr() on an Ok value in MockResult!");
+        return nullptr;
+    }
+    return instance->fields["error"];
+}
+
 void registerAll(VM *vm)
 {
     vm->defineNative("assert", -1, assertNative);
@@ -693,6 +754,15 @@ void registerAll(VM *vm)
     vm->defineNative("after", -1, afterNative);
     vm->defineNative("beforeEach", -1, beforeEachNative);
     vm->defineNative("afterEach", -1, afterEachNative);
+
+    auto mockResultClass = new ObjClass("MockResult");
+    mockResultClass->statics["ok"] = new ObjNative("ok", 1, mockResultOk);
+    mockResultClass->statics["err"] = new ObjNative("err", 1, mockResultErr);
+    mockResultClass->methods["isOk"] = new ObjNative("isOk", 0, mockResultIsOk);
+    mockResultClass->methods["isErr"] = new ObjNative("isErr", 0, mockResultIsErr);
+    mockResultClass->methods["unwrap"] = new ObjNative("unwrap", 0, mockResultUnwrap);
+    mockResultClass->methods["unwrapErr"] = new ObjNative("unwrapErr", 0, mockResultUnwrapErr);
+    vm->globals["MockResult"] = mockResultClass;
 }
 
 void registerSymbols(SymbolTable *scope)
@@ -717,6 +787,12 @@ void registerSymbols(SymbolTable *scope)
     addFunc("after");
     addFunc("beforeEach");
     addFunc("afterEach");
+
+    Symbol mockResultSym;
+    mockResultSym.name = "MockResult";
+    mockResultSym.type = "class";
+    mockResultSym.isConst = true;
+    scope->define(mockResultSym);
 }
 
 } // namespace Test
