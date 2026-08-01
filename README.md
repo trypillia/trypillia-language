@@ -6,7 +6,7 @@
 
 *A modern, fast, and elegantly designed programming language.*
 
-[![Build and Release](https://github.com/ChernegaSergiy/trypillia-language/actions/workflows/build.yml/badge.svg)](https://github.com/ChernegaSergiy/trypillia-language/actions/workflows/build.yml)
+[![Build and Release](https://github.com/trypillia/trypillia-language/actions/workflows/build.yml/badge.svg)](https://github.com/trypillia/trypillia-language/actions/workflows/build.yml)
 [![License: CSSM Unlimited License v2.0](https://img.shields.io/badge/License-CSSM%20Unlimited%20License%20v2.0-blue.svg?logo=opensourceinitiative)](LICENSE)
 
 [Features](#features) · [Performance](#performance) · [Installation & Build](#installation--build) · [Quick Start](#quick-start) · [IDE Support](#ide-support) · [Contributing](#contributing)
