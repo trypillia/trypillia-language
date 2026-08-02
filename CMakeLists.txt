@@ -39,12 +39,14 @@ add_library(trypillia_core STATIC ${CORE_SOURCES} ${sljit_SOURCE_DIR}/sljit_src/
 target_include_directories(trypillia_core PUBLIC include ${sljit_SOURCE_DIR}/sljit_src)
 target_link_libraries(trypillia_core PUBLIC mbedtls mbedx509 mbedcrypto)
 
-find_package(FFI REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FFI REQUIRED libffi)
 
 # dlopen/dlsym/dlclose for the FFI module (native/ffi/FFI.cpp). CMAKE_DL_LIBS
 # is empty on platforms where these are already part of libc (e.g. modern
 # glibc) and "-ldl" on platforms where a separate library is still required.
-target_link_libraries(trypillia_core PUBLIC ${CMAKE_DL_LIBS} ffi)
+target_link_libraries(trypillia_core PUBLIC ${CMAKE_DL_LIBS} ${FFI_LIBRARIES})
+target_include_directories(trypillia_core PUBLIC ${FFI_INCLUDE_DIRS})
 
 add_executable(trypillia src/main.cpp)
 target_link_libraries(trypillia trypillia_core)
