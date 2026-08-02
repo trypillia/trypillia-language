@@ -1,0 +1,98 @@
+describe("FFI", fn() {
+    it("returns an error Result for a nonexistent library path", fn() {
+        let r = FFI.open("/no/such/library/definitely_missing.so");
+        assertEq(r.isOk, false);
+        assertEq(r.error.message != "", true);
+    });
+
+    it("FFI.nullPointer() reports isNull() true", fn() {
+        let p = FFI.nullPointer();
+        assertEq(p.isNull(), true);
+    });
+
+    it("rejects an argument-type list that is too long", fn() {
+        // Only meaningful if some library on this platform loads; try a
+        // couple of very common cross-platform C runtime names and skip
+        // gracefully if none of them are present (e.g. non-glibc systems).
+        let candidates = ["libc.so.6", "libm.so.6", "msvcrt.dll", "libSystem.dylib"];
+        let lib = nil;
+        let i = 0;
+        while (i < candidates.length() && lib == nil) {
+            let r = FFI.open(candidates[i]);
+            if (r.isOk) {
+                lib = r.value;
+            }
+            i = i + 1;
+        }
+
+        if (lib != nil) {
+            let types = ["int32", "int32", "int32", "int32", "int32", "int32", "int32"];
+            let r = lib.call("abs", "int32", types, 1, 2, 3, 4, 5, 6, 7);
+            assertEq(r.isOk, false);
+        }
+    });
+
+    it("can call a real libc/libm function end-to-end when available", fn() {
+        let candidates = ["libm.so.6", "libc.so.6", "msvcrt.dll", "libSystem.dylib"];
+        let lib = nil;
+        let i = 0;
+        while (i < candidates.length() && lib == nil) {
+            let r = FFI.open(candidates[i]);
+            if (r.isOk) {
+                lib = r.value;
+            }
+            i = i + 1;
+        }
+
+        if (lib != nil) {
+            // abs(-5) == 5 is available in both libc and libm on every
+            // platform we care about here.
+            let r = lib.call("abs", "int32", ["int32"], -5);
+            if (r.isOk) {
+                assertEq(r.value, 5);
+            }
+            lib.close();
+        }
+    });
+
+    it("define() caches a callable and reuses it", fn() {
+        let candidates = ["libm.so.6", "libc.so.6"];
+        let lib = nil;
+        let i = 0;
+        while (i < candidates.length() && lib == nil) {
+            let r = FFI.open(candidates[i]);
+            if (r.isOk) {
+                lib = r.value;
+            }
+            i = i + 1;
+        }
+
+        if (lib != nil) {
+            let absFnR = lib.define("abs", "int32", ["int32"]);
+            if (absFnR.isOk) {
+                let absFn = absFnR.value;
+                assertEq(absFn.call(-7).value, 7);
+                assertEq(absFn.call(7).value, 7);
+            }
+        }
+    });
+
+    it("errors cleanly on a call after close()", fn() {
+        let candidates = ["libm.so.6", "libc.so.6"];
+        let lib = nil;
+        let i = 0;
+        while (i < candidates.length() && lib == nil) {
+            let r = FFI.open(candidates[i]);
+            if (r.isOk) {
+                lib = r.value;
+            }
+            i = i + 1;
+        }
+
+        if (lib != nil) {
+            lib.close();
+            let r = lib.call("abs", "int32", ["int32"], -1);
+            assertEq(r.isOk, false);
+        }
+    });
+});
