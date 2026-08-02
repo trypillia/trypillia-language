@@ -96,6 +96,7 @@ enum class TokenType
     SUPER,
     NAMESPACE,
     USE,
+    AS,
 
     // Trivia
     COMMENT,
