@@ -538,7 +538,7 @@ ExprNode *Parser::parseBinary(ExprNode *left, bool canAssign)
 
 ExprNode *Parser::parseCall(ExprNode *left, bool canAssign)
 {
-    Token paren = previousToken; // LPAREN
+    Token leftParen = previousToken; // LPAREN
     std::vector<ExprNode *> arguments;
     if (currentToken.type != TokenType::RPAREN)
     {
@@ -547,9 +547,9 @@ ExprNode *Parser::parseCall(ExprNode *left, bool canAssign)
             arguments.push_back(expression());
         } while (match(TokenType::COMMA));
     }
-    Token rparen = currentToken;
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
-    return new CallExpr(left, rparen, arguments);
+    return new CallExpr(left, leftParen, arguments, rightParen);
 }
 
 ExprNode *Parser::parseDot(ExprNode *left, bool canAssign)
@@ -578,6 +578,7 @@ ExprNode *Parser::parseStatic(ExprNode *left, bool canAssign)
 
     if (match(TokenType::LPAREN))
     {
+        Token leftParen = previousToken;
         std::vector<ExprNode *> arguments;
         if (currentToken.type != TokenType::RPAREN)
         {
@@ -586,9 +587,9 @@ ExprNode *Parser::parseStatic(ExprNode *left, bool canAssign)
                 arguments.push_back(expression());
             } while (match(TokenType::COMMA));
         }
-        Token paren = currentToken;
+        Token rightParen = currentToken;
         consume(TokenType::RPAREN);
-        return new StaticCallExpr(className, member, paren, arguments);
+        return new StaticCallExpr(className, member, leftParen, arguments, rightParen);
     }
     else
     {
