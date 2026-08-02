@@ -1,6 +1,8 @@
 #include "Serializer.h"
 
+#include <filesystem>
 #include <iostream>
+#include <system_error>
 
 #define MAGIC "TRYC"
 #define VERSION 1
@@ -42,6 +44,16 @@ bool Serializer::buildStandalone(ObjFunction *function, const std::string &trypi
     // 3. Write footer (Size + Magic TRYS)
     dst.write(reinterpret_cast<const char *>(&bytecodeSize), sizeof(bytecodeSize));
     dst.write("TRYS", 4);
+
+    dst.close();
+
+    // 4. Restore the executable bit (std::ofstream never grants execute).
+    std::error_code ec;
+    std::filesystem::permissions(outputPath,
+                                 std::filesystem::perms::owner_all | std::filesystem::perms::group_read |
+                                     std::filesystem::perms::group_exec | std::filesystem::perms::others_read |
+                                     std::filesystem::perms::others_exec,
+                                 std::filesystem::perm_options::replace, ec);
 
     return true;
 }
