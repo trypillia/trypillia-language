@@ -95,7 +95,7 @@ class Parser
     StmtNode *whileStatement();
     StmtNode *doWhileStatement();
     StmtNode *forStatement();
-    StmtNode *finishForLoop(StmtNode *initializer);
+    StmtNode *finishForLoop(Token keywordFor, Token leftParen, StmtNode *initializer, Token semicolon1);
     StmtNode *returnStatement();
     StmtNode *breakStatement();
     StmtNode *continueStatement();
