@@ -948,9 +948,12 @@ class LoadStmt : public StmtNode
 class NamespaceStmt : public StmtNode
 {
   public:
+    Token keywordNamespace;
     Token name;
+    Token semicolon;
 
-    NamespaceStmt(Token name) : name(name)
+    NamespaceStmt(Token keywordNamespace, Token name, Token semicolon)
+        : keywordNamespace(keywordNamespace), name(name), semicolon(semicolon)
     {
     }
 
