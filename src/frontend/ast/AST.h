@@ -564,8 +564,9 @@ class BreakStmt : public StmtNode
 {
   public:
     Token keyword;
+    Token semicolon;
 
-    BreakStmt(Token keyword) : keyword(keyword)
+    BreakStmt(Token keyword, Token semicolon) : keyword(keyword), semicolon(semicolon)
     {
     }
 
