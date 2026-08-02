@@ -281,11 +281,12 @@ class CallExpr : public ExprNode
 {
   public:
     ExprNode *callee;
-    Token paren;
+    Token leftParen;
     std::vector<ExprNode *> arguments;
+    Token rightParen;
 
-    CallExpr(ExprNode *callee, Token paren, std::vector<ExprNode *> arguments)
-        : callee(callee), paren(paren), arguments(arguments)
+    CallExpr(ExprNode *callee, Token leftParen, std::vector<ExprNode *> arguments, Token rightParen)
+        : callee(callee), leftParen(leftParen), arguments(arguments), rightParen(rightParen)
     {
     }
 
@@ -827,11 +828,14 @@ class StaticCallExpr : public ExprNode
   public:
     Token className;
     Token memberName;
-    Token paren;
+    Token leftParen;
     std::vector<ExprNode *> arguments;
+    Token rightParen;
 
-    StaticCallExpr(Token className, Token memberName, Token paren, std::vector<ExprNode *> arguments)
-        : className(className), memberName(memberName), paren(paren), arguments(arguments)
+    StaticCallExpr(Token className, Token memberName, Token leftParen, std::vector<ExprNode *> arguments,
+                   Token rightParen)
+        : className(className), memberName(memberName), leftParen(leftParen), arguments(arguments),
+          rightParen(rightParen)
     {
     }
 
