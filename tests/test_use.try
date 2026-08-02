@@ -1,0 +1,16 @@
+namespace Dummy.Math;
+
+class MathHelper {
+    fn add(a, b) {
+        return a + b;
+    }
+}
+
+use Dummy.Math.MathHelper as Helper;
+
+describe("use statements", fn() {
+    it("should resolve class through alias", fn() {
+        let h = Helper();
+        assertEq(h.add(5, 5), 10);
+    });
+});
