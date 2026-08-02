@@ -187,6 +187,7 @@ int main(int argc, char **argv)
     if (argIdx >= argc)
     {
         std::cerr << "Usage: " << argv[0] << " [--coverage] [build] <file> [output]" << std::endl;
+        std::cerr << "Run `" << argv[0] << " --help` for more information." << std::endl;
         return 1;
     }
 
@@ -196,6 +197,7 @@ int main(int argc, char **argv)
         if (argIdx >= argc)
         {
             std::cerr << "Usage: " << argv[0] << " build <file.try> [output]" << std::endl;
+            std::cerr << "Run `" << argv[0] << " build --help` for more information." << std::endl;
             return 1;
         }
         buildStandalone = true;
@@ -215,6 +217,7 @@ int main(int argc, char **argv)
         if (argIdx >= argc)
         {
             std::cerr << "Usage: " << argv[0] << " fmt <file_or_directory>..." << std::endl;
+            std::cerr << "Run `" << argv[0] << " fmt --help` for more information." << std::endl;
             return 1;
         }
         for (int i = argIdx; i < argc; i++)
