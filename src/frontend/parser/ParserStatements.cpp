@@ -80,8 +80,9 @@ ASTNode *Parser::parse()
 StmtNode *Parser::expressionStatement()
 {
     ExprNode *expr = expression();
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
-    return new ExpressionStmt(expr);
+    return new ExpressionStmt(expr, semicolon);
 }
 
 StmtNode *Parser::loadStatement()
@@ -257,7 +258,9 @@ StmtNode *Parser::usingStatement()
     else
     {
         ExprNode *expr = expression();
-        declaration = new ExpressionStmt(expr);
+        Token dummySemicolon;
+        dummySemicolon.type = TokenType::UNKNOWN;
+        declaration = new ExpressionStmt(expr, dummySemicolon);
     }
 
     consume(TokenType::RPAREN);
@@ -307,7 +310,9 @@ StmtNode *Parser::forStatement()
     else
     {
         ExprNode *expr = expression();
-        initializer = new ExpressionStmt(expr);
+        Token dummySemicolon;
+        dummySemicolon.type = TokenType::UNKNOWN;
+        initializer = new ExpressionStmt(expr, dummySemicolon);
     }
     consume(TokenType::SEMICOLON);
     return finishForLoop(initializer);
