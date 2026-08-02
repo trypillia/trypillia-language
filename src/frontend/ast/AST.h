@@ -933,9 +933,12 @@ class StaticSetExpr : public ExprNode
 class LoadStmt : public StmtNode
 {
   public:
+    Token keywordLoad;
     Token filename;
+    Token semicolon;
 
-    LoadStmt(Token filename) : filename(filename)
+    LoadStmt(Token keywordLoad, Token filename, Token semicolon)
+        : keywordLoad(keywordLoad), filename(filename), semicolon(semicolon)
     {
     }
 
