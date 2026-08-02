@@ -86,6 +86,13 @@ void formatFileOrDirectory(const std::string &path)
     }
 
     FormatterVisitor formatter;
+    if (parser.hasError)
+    {
+        std::cerr << "Parser encountered errors in " << path << ". Skipping formatting." << std::endl;
+        if (auto program = dynamic_cast<ProgramNode *>(ast))
+            delete program;
+        return;
+    }
     ast->accept(&formatter);
     std::string formattedCode = formatter.getOutput();
 
