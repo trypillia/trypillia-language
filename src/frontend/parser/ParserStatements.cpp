@@ -494,6 +494,7 @@ StmtNode *Parser::varDeclaration()
 FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier)
 {
     bool isConst = (currentToken.type == TokenType::CONST);
+    Token keyword = currentToken;
     if (isConst)
     {
         advance();
@@ -502,15 +503,20 @@ FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier)
     // Optionally consume 'let'
     if (currentToken.type == TokenType::LET)
     {
+        if (!isConst)
+            keyword = currentToken;
         advance();
     }
 
-    Token name = currentToken;
+    Token nameToken = currentToken;
     consume(TokenType::IDENTIFIER);
 
+    Token assign;
+    assign.type = TokenType::UNKNOWN;
     ExprNode *initializer = nullptr;
     if (currentToken.type == TokenType::ASSIGN)
     {
+        assign = currentToken;
         advance();
         initializer = expression();
     }
@@ -519,8 +525,10 @@ FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier)
         throw std::runtime_error("Constant field requires an initializer");
     }
 
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
-    return new FieldDeclNode(name.lexeme, initializer, accessModifier, isConst);
+    return new FieldDeclNode(nameToken.lexeme, keyword, nameToken, assign, initializer, semicolon, accessModifier,
+                             isConst);
 }
 
 FunctionNode *Parser::parseFunction(AccessModifier accessModifier, bool isAbstract, bool isStatic)
@@ -593,6 +601,7 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier, bool isAbstra
 
 ClassNode *Parser::parseClass()
 {
+    Token keywordClass = currentToken;
     consume(TokenType::CLASS);
 
     Token name = currentToken;
@@ -600,18 +609,27 @@ ClassNode *Parser::parseClass()
 
     // Parse optional parent class (< ParentName)
     std::string parentName = "";
+    Token keywordLess;
+    keywordLess.type = TokenType::UNKNOWN;
+    Token parentNameToken;
+    parentNameToken.type = TokenType::UNKNOWN;
     if (currentToken.type == TokenType::LESS)
     {
+        keywordLess = currentToken;
         advance();
         Token parent = currentToken;
         consume(TokenType::IDENTIFIER);
+        parentNameToken = parent;
         parentName = parent.lexeme;
     }
 
     // Parse optional implements clause
     std::vector<std::string> interfaceNames;
+    Token keywordImplements;
+    keywordImplements.type = TokenType::UNKNOWN;
     if (currentToken.type == TokenType::IMPLEMENTS)
     {
+        keywordImplements = currentToken;
         advance();
         do
         {
@@ -622,6 +640,7 @@ ClassNode *Parser::parseClass()
     }
 
     // Parse class body
+    Token leftBrace = currentToken;
     consume(TokenType::LBRACE);
     std::vector<FunctionNode *> methods;
     std::vector<FieldDeclNode *> fields;
@@ -705,22 +724,28 @@ ClassNode *Parser::parseClass()
         }
     }
 
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
 
-    auto node = new ClassNode(name.lexeme, parentName, methods, fields);
+    auto node = new ClassNode(name.lexeme, keywordClass, name, parentName, keywordLess, parentNameToken,
+                              keywordImplements, leftBrace, methods, fields, rightBrace);
     node->interfaceNames = interfaceNames;
     return node;
 }
 
 InterfaceNode *Parser::parseInterface()
 {
+    Token keywordInterface = previousToken;
     Token name = currentToken;
     consume(TokenType::IDENTIFIER);
 
     // Parse optional parent interfaces (< Parent1, Parent2)
     std::vector<std::string> parentNames;
+    Token keywordLess;
+    keywordLess.type = TokenType::UNKNOWN;
     if (currentToken.type == TokenType::LESS)
     {
+        keywordLess = currentToken;
         advance();
         do
         {
@@ -730,6 +755,7 @@ InterfaceNode *Parser::parseInterface()
         } while (match(TokenType::COMMA));
     }
 
+    Token leftBrace = currentToken;
     consume(TokenType::LBRACE);
     std::vector<FunctionNode *> methods;
 
@@ -778,18 +804,24 @@ InterfaceNode *Parser::parseInterface()
         }
     }
 
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
-    return new InterfaceNode(name.lexeme, methods, parentNames);
+    return new InterfaceNode(name.lexeme, keywordInterface, name, keywordLess, leftBrace, methods, parentNames,
+                             rightBrace);
 }
 
 TraitNode *Parser::parseTrait()
 {
+    Token keywordTrait = previousToken;
     Token name = currentToken;
     consume(TokenType::IDENTIFIER);
 
     std::vector<std::string> parentNames;
+    Token keywordLess;
+    keywordLess.type = TokenType::UNKNOWN;
     if (currentToken.type == TokenType::LESS)
     {
+        keywordLess = currentToken;
         advance();
         do
         {
@@ -799,6 +831,7 @@ TraitNode *Parser::parseTrait()
         } while (match(TokenType::COMMA));
     }
 
+    Token leftBrace = currentToken;
     consume(TokenType::LBRACE);
     std::vector<FunctionNode *> methods;
 
@@ -869,8 +902,9 @@ TraitNode *Parser::parseTrait()
         }
     }
 
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
-    return new TraitNode(name.lexeme, methods, parentNames);
+    return new TraitNode(name.lexeme, keywordTrait, name, keywordLess, leftBrace, methods, parentNames, rightBrace);
 }
 
 ASTNode *Parser::declaration()
