@@ -178,9 +178,7 @@ void FormatterVisitor::visit(BlockStmt *node)
     }
     indentLevel--;
 
-    // We already moved to the new line at the end of the last statement
-    // but the indent was higher. Let's fix that later, this is just a stub.
-    output.erase(output.find_last_not_of(" \t") + 1); // remove indent
+    output.erase(output.find_last_not_of(" \t\n") + 1);
     printNewline();
     printToken(node->rightBrace);
 }
@@ -205,6 +203,7 @@ void FormatterVisitor::visit(IfStmt *node)
         printToken(node->keywordElse);
         node->elseBranch->accept(this);
     }
+    printNewline();
 }
 
 void FormatterVisitor::visit(WhileStmt *node)
@@ -215,6 +214,7 @@ void FormatterVisitor::visit(WhileStmt *node)
     node->condition->accept(this);
     printToken(node->rightParen);
     node->body->accept(this);
+    printNewline();
 }
 void FormatterVisitor::visit(DoWhileStmt *node)
 {
@@ -263,16 +263,11 @@ void FormatterVisitor::visit(ForStmt *node)
     if (node->initializer)
     {
         node->initializer->accept(this);
-        // The initializer statement will print its own semicolon and newline.
-        // We need to fix this because inside a for loop, it shouldn't print a newline.
-        // For now, since VarStmt/ExpressionStmt print newlines, we can just remove the newline.
-        if (!output.empty() && output.back() == '\n')
-            output.pop_back(); // Very hacky, ideally we need to tell the stmt not to print newline
+        // The initializer statement will print its own newline.
+        // We need to remove it because inside a for loop, it shouldn't print a newline.
+        output.erase(output.find_last_not_of(" \t\n") + 1);
     }
-    else
-    {
-        printToken(node->semicolon1);
-    }
+    printToken(node->semicolon1);
     printSpace();
     if (node->condition)
     {
@@ -286,6 +281,7 @@ void FormatterVisitor::visit(ForStmt *node)
     }
     printToken(node->rightParen);
     node->body->accept(this);
+    printNewline();
 }
 void FormatterVisitor::visit(ForeachStmt *node)
 {
@@ -299,6 +295,7 @@ void FormatterVisitor::visit(ForeachStmt *node)
     node->iterable->accept(this);
     printToken(node->rightParen);
     node->body->accept(this);
+    printNewline();
 }
 void FormatterVisitor::visit(SwitchStmt *node)
 {
@@ -452,7 +449,7 @@ void FormatterVisitor::visit(FunctionNode *node)
         }
         indentLevel--;
 
-        output.erase(output.find_last_not_of(" \t") + 1); // remove indent
+        output.erase(output.find_last_not_of(" \t\n") + 1);
         printNewline();
         printToken(node->rightBrace);
     }
@@ -531,7 +528,7 @@ void FormatterVisitor::visit(ClassNode *node)
     }
     indentLevel--;
 
-    output.erase(output.find_last_not_of(" \t") + 1); // remove indent
+    output.erase(output.find_last_not_of(" \t\n") + 1);
     printNewline();
     printToken(node->rightBrace);
     printNewline();
@@ -571,7 +568,7 @@ void FormatterVisitor::visit(InterfaceNode *node)
     }
     indentLevel--;
 
-    output.erase(output.find_last_not_of(" \t") + 1); // remove indent
+    output.erase(output.find_last_not_of(" \t\n") + 1);
     printNewline();
     printToken(node->rightBrace);
     printNewline();
@@ -598,7 +595,7 @@ void FormatterVisitor::visit(TraitNode *node)
     }
     indentLevel--;
 
-    output.erase(output.find_last_not_of(" \t") + 1); // remove indent
+    output.erase(output.find_last_not_of(" \t\n") + 1);
     printNewline();
     printToken(node->rightBrace);
     printNewline();
