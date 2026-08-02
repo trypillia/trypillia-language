@@ -443,9 +443,12 @@ class VarStmt : public StmtNode
 class BlockStmt : public StmtNode
 {
   public:
+    Token leftBrace;
     std::vector<StmtNode *> statements;
+    Token rightBrace;
 
-    BlockStmt(std::vector<StmtNode *> statements) : statements(statements)
+    BlockStmt(Token leftBrace, std::vector<StmtNode *> statements, Token rightBrace)
+        : leftBrace(leftBrace), statements(statements), rightBrace(rightBrace)
     {
     }
 
