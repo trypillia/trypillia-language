@@ -530,8 +530,9 @@ class ReturnStmt : public StmtNode
   public:
     Token keyword;
     ExprNode *value;
+    Token semicolon;
 
-    ReturnStmt(Token keyword, ExprNode *value) : keyword(keyword), value(value)
+    ReturnStmt(Token keyword, ExprNode *value, Token semicolon) : keyword(keyword), value(value), semicolon(semicolon)
     {
     }
 
