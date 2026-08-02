@@ -4,6 +4,7 @@
 #include <string>
 
 #include "frontend/ast/ASTOptimizer.h"
+#include "frontend/formatter/FormatterVisitor.h"
 #include "frontend/lexer/Lexer.h"
 #include "frontend/parser/Parser.h"
 #include "frontend/semantic/SemanticAnalyzer.h"
@@ -46,6 +47,64 @@ std::string getExecutablePath(const char *argv0)
     }
     return std::string(argv0);
 #endif
+}
+
+void formatFileOrDirectory(const std::string &path)
+{
+    if (std::filesystem::is_directory(path))
+    {
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(path))
+        {
+            if (entry.is_regular_file() && entry.path().extension() == ".try")
+            {
+                formatFileOrDirectory(entry.path().string());
+            }
+        }
+        return;
+    }
+
+    std::ifstream sourceFile(path);
+    if (!sourceFile.is_open())
+    {
+        std::cerr << "Error: Could not open source file: " << path << std::endl;
+        return;
+    }
+    std::string sourceCode((std::istreambuf_iterator<char>(sourceFile)), std::istreambuf_iterator<char>());
+    sourceFile.close();
+
+    Lexer lexer(sourceCode, true);
+    Parser parser(lexer);
+    ASTNode *ast = nullptr;
+    try
+    {
+        ast = parser.parse();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Syntax error in " << path << ": " << e.what() << ". Skipping formatting." << std::endl;
+        return;
+    }
+
+    FormatterVisitor formatter;
+    ast->accept(&formatter);
+    std::string formattedCode = formatter.getOutput();
+
+    std::ofstream outFile(path, std::ios::trunc);
+    if (outFile.is_open())
+    {
+        outFile << formattedCode;
+        outFile.close();
+        std::cout << "Formatted: " << path << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error: Could not save formatted file: " << path << std::endl;
+    }
+
+    if (auto program = dynamic_cast<ProgramNode *>(ast))
+    {
+        delete program;
+    }
 }
 
 int main(int argc, char **argv)
@@ -111,6 +170,20 @@ int main(int argc, char **argv)
         {
             outputFile = "app";
         }
+    }
+    else if (command == "fmt")
+    {
+        argIdx++;
+        if (argIdx >= argc)
+        {
+            std::cerr << "Usage: " << argv[0] << " fmt <file_or_directory>..." << std::endl;
+            return 1;
+        }
+        for (int i = argIdx; i < argc; i++)
+        {
+            formatFileOrDirectory(argv[i]);
+        }
+        return 0;
     }
     else
     {
