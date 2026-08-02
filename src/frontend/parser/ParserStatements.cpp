@@ -237,6 +237,7 @@ StmtNode *Parser::usingStatement()
     if (currentToken.type == TokenType::LET || currentToken.type == TokenType::CONST)
     {
         bool isConst = (currentToken.type == TokenType::CONST);
+        Token keyword = currentToken;
         consume(isConst ? TokenType::CONST : TokenType::LET);
         if (isConst)
         {
@@ -246,16 +247,21 @@ StmtNode *Parser::usingStatement()
         Token name = currentToken;
         consume(TokenType::IDENTIFIER);
 
+        Token assign;
+        assign.type = TokenType::UNKNOWN;
         ExprNode *initializer = nullptr;
         if (match(TokenType::ASSIGN))
         {
+            assign = previousToken;
             initializer = expression();
         }
         else if (isConst)
         {
             throw std::runtime_error("Constant declaration requires an initializer");
         }
-        declaration = new VarStmt(name, initializer, isConst);
+        Token dummySemicolon;
+        dummySemicolon.type = TokenType::UNKNOWN;
+        declaration = new VarStmt(keyword, name, assign, initializer, dummySemicolon, isConst);
     }
     else
     {
@@ -280,6 +286,7 @@ StmtNode *Parser::forStatement()
     // Check for foreach: for (let x in iterable)
     if (match(TokenType::LET))
     {
+        Token keyword = previousToken;
         Token name = currentToken;
         consume(TokenType::IDENTIFIER);
 
@@ -292,13 +299,18 @@ StmtNode *Parser::forStatement()
         }
 
         // Regular for with var initializer
+        Token assign;
+        assign.type = TokenType::UNKNOWN;
         ExprNode *initExpr = nullptr;
         if (match(TokenType::ASSIGN))
         {
+            assign = previousToken;
             initExpr = expression();
         }
 
-        StmtNode *initializer = new VarStmt(name, initExpr);
+        Token dummySemicolon;
+        dummySemicolon.type = TokenType::UNKNOWN;
+        StmtNode *initializer = new VarStmt(keyword, name, assign, initExpr, dummySemicolon);
         consume(TokenType::SEMICOLON);
         return finishForLoop(initializer);
     }
@@ -407,6 +419,7 @@ StmtNode *Parser::statement()
 // Declaration parsers
 StmtNode *Parser::varDeclaration()
 {
+    Token keyword = currentToken;
     bool isConst = (currentToken.type == TokenType::CONST);
     consume(isConst ? TokenType::CONST : TokenType::LET);
     if (isConst)
@@ -417,9 +430,12 @@ StmtNode *Parser::varDeclaration()
     Token name = currentToken;
     consume(TokenType::IDENTIFIER);
 
+    Token assign;
+    assign.type = TokenType::UNKNOWN;
     ExprNode *initializer = nullptr;
     if (match(TokenType::ASSIGN))
     {
+        assign = previousToken;
         initializer = expression();
     }
     else if (isConst)
@@ -427,8 +443,9 @@ StmtNode *Parser::varDeclaration()
         throw std::runtime_error("Constant declaration requires an initializer");
     }
 
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
-    return new VarStmt(name, initializer, isConst);
+    return new VarStmt(keyword, name, assign, initializer, semicolon, isConst);
 }
 
 FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier)
