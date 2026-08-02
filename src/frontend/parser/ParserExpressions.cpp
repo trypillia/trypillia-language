@@ -554,9 +554,10 @@ ExprNode *Parser::parseCall(ExprNode *left, bool canAssign)
 
 ExprNode *Parser::parseDot(ExprNode *left, bool canAssign)
 {
+    Token dot = previousToken;
     Token name = currentToken;
     consume(TokenType::IDENTIFIER);
-    return new GetExpr(left, name);
+    return new GetExpr(left, dot, name);
 }
 
 ExprNode *Parser::parseIndex(ExprNode *left, bool canAssign)
@@ -573,6 +574,7 @@ ExprNode *Parser::parseStatic(ExprNode *left, bool canAssign)
         throw std::runtime_error("Static access requires a class name");
     }
     Token className = dynamic_cast<VariableExpr *>(left)->name;
+    Token colonColon = previousToken;
     Token member = currentToken;
     consume(TokenType::IDENTIFIER);
 
@@ -593,7 +595,7 @@ ExprNode *Parser::parseStatic(ExprNode *left, bool canAssign)
     }
     else
     {
-        return new StaticGetExpr(className, member);
+        return new StaticGetExpr(className, colonColon, member);
     }
 }
 
