@@ -45,7 +45,31 @@ void FormatterVisitor::printToken(const Token &token)
         return;
 
     // TODO: Handle leading and trailing trivia (comments) when they are fully implemented
-    output += token.lexeme;
+    if (token.type == TokenType::STRING)
+    {
+        // Really basic string escaping for the formatter for now
+        output += "\"";
+        for (char c : token.lexeme)
+        {
+            if (c == '"')
+                output += "\\\"";
+            else if (c == '\\')
+                output += "\\\\";
+            else if (c == '\n')
+                output += "\\n";
+            else if (c == '\r')
+                output += "\\r";
+            else if (c == '\t')
+                output += "\\t";
+            else
+                output += c;
+        }
+        output += "\"";
+    }
+    else
+    {
+        output += token.lexeme;
+    }
 }
 
 void FormatterVisitor::visit(ProgramNode *node)
@@ -145,9 +169,9 @@ void FormatterVisitor::visit(BlockStmt *node)
         printSpace();
     }
     printToken(node->leftBrace);
+    indentLevel++;
     printNewline();
 
-    indentLevel++;
     for (auto stmt : node->statements)
     {
         stmt->accept(this);
@@ -419,9 +443,9 @@ void FormatterVisitor::visit(FunctionNode *node)
             printSpace();
 
         printToken(node->leftBrace);
+        indentLevel++;
         printNewline();
 
-        indentLevel++;
         for (auto stmt : node->body)
         {
             stmt->accept(this);
@@ -489,9 +513,9 @@ void FormatterVisitor::visit(ClassNode *node)
         printSpace();
 
     printToken(node->leftBrace);
+    indentLevel++;
     printNewline();
 
-    indentLevel++;
     for (auto field : node->fields)
     {
         field->accept(this);
