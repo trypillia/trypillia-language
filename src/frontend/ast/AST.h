@@ -521,10 +521,14 @@ class IfStmt : public StmtNode
 class WhileStmt : public StmtNode
 {
   public:
+    Token keywordWhile;
+    Token leftParen;
     ExprNode *condition;
+    Token rightParen;
     StmtNode *body;
 
-    WhileStmt(ExprNode *condition, StmtNode *body) : condition(condition), body(body)
+    WhileStmt(Token keywordWhile, Token leftParen, ExprNode *condition, Token rightParen, StmtNode *body)
+        : keywordWhile(keywordWhile), leftParen(leftParen), condition(condition), rightParen(rightParen), body(body)
     {
     }
 
