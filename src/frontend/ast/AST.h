@@ -787,14 +787,20 @@ class FieldDeclNode : public StmtNode
 {
   public:
     std::string name;
+    Token keyword;
+    Token nameToken;
+    Token assign; // UNKNOWN if no initializer
     ExprNode *initializer;
+    Token semicolon;
+
     AccessModifier accessModifier;
     bool isConst;
     bool isStatic;
 
-    FieldDeclNode(std::string name, ExprNode *initializer, AccessModifier accessModifier = AccessModifier::PUBLIC,
-                  bool isConst = false)
-        : name(name), initializer(initializer), accessModifier(accessModifier), isConst(isConst), isStatic(false)
+    FieldDeclNode(std::string name, Token keyword, Token nameToken, Token assign, ExprNode *initializer,
+                  Token semicolon, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isConst = false)
+        : name(name), keyword(keyword), nameToken(nameToken), assign(assign), initializer(initializer),
+          semicolon(semicolon), accessModifier(accessModifier), isConst(isConst), isStatic(false)
     {
     }
 
@@ -810,15 +816,29 @@ class ClassNode : public StmtNode
 {
   public:
     std::string name;
+    Token keywordClass;
+    Token nameToken;
+
     std::string parentName;
+    Token keywordLess;
+    Token parentNameToken;
+
+    std::vector<std::string> interfaceNames;
+    Token keywordImplements;
+
+    Token leftBrace;
     std::vector<FunctionNode *> methods;
     std::vector<FieldDeclNode *> fields;
-    bool isAbstract;
-    std::vector<std::string> interfaceNames;
+    Token rightBrace;
 
-    ClassNode(std::string name, std::string parentName, std::vector<FunctionNode *> methods,
-              std::vector<FieldDeclNode *> fields = {})
-        : name(name), parentName(parentName), methods(methods), fields(fields), isAbstract(false)
+    bool isAbstract;
+
+    ClassNode(std::string name, Token keywordClass, Token nameToken, std::string parentName, Token keywordLess,
+              Token parentNameToken, Token keywordImplements, Token leftBrace, std::vector<FunctionNode *> methods,
+              std::vector<FieldDeclNode *> fields, Token rightBrace)
+        : name(name), keywordClass(keywordClass), nameToken(nameToken), parentName(parentName),
+          keywordLess(keywordLess), parentNameToken(parentNameToken), keywordImplements(keywordImplements),
+          leftBrace(leftBrace), methods(methods), fields(fields), rightBrace(rightBrace), isAbstract(false)
     {
     }
 
@@ -841,11 +861,20 @@ class InterfaceNode : public StmtNode
 {
   public:
     std::string name;
-    std::vector<FunctionNode *> methods;
-    std::vector<std::string> parentNames;
+    Token keywordInterface;
+    Token nameToken;
 
-    InterfaceNode(std::string name, std::vector<FunctionNode *> methods, std::vector<std::string> parentNames = {})
-        : name(name), methods(methods), parentNames(parentNames)
+    std::vector<std::string> parentNames;
+    Token keywordLess;
+
+    Token leftBrace;
+    std::vector<FunctionNode *> methods;
+    Token rightBrace;
+
+    InterfaceNode(std::string name, Token keywordInterface, Token nameToken, Token keywordLess, Token leftBrace,
+                  std::vector<FunctionNode *> methods, std::vector<std::string> parentNames, Token rightBrace)
+        : name(name), keywordInterface(keywordInterface), nameToken(nameToken), parentNames(parentNames),
+          keywordLess(keywordLess), leftBrace(leftBrace), methods(methods), rightBrace(rightBrace)
     {
     }
 
@@ -864,11 +893,20 @@ class TraitNode : public StmtNode
 {
   public:
     std::string name;
-    std::vector<FunctionNode *> methods;
-    std::vector<std::string> parentNames;
+    Token keywordTrait;
+    Token nameToken;
 
-    TraitNode(std::string name, std::vector<FunctionNode *> methods, std::vector<std::string> parentNames = {})
-        : name(name), methods(methods), parentNames(parentNames)
+    std::vector<std::string> parentNames;
+    Token keywordLess;
+
+    Token leftBrace;
+    std::vector<FunctionNode *> methods;
+    Token rightBrace;
+
+    TraitNode(std::string name, Token keywordTrait, Token nameToken, Token keywordLess, Token leftBrace,
+              std::vector<FunctionNode *> methods, std::vector<std::string> parentNames, Token rightBrace)
+        : name(name), keywordTrait(keywordTrait), nameToken(nameToken), parentNames(parentNames),
+          keywordLess(keywordLess), leftBrace(leftBrace), methods(methods), rightBrace(rightBrace)
     {
     }
 
