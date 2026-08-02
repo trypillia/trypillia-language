@@ -69,6 +69,7 @@ ASTNode *Parser::parse()
     catch (const std::exception &e)
     {
         ErrorHandling::reportError("Error while parsing: " + std::string(e.what()));
+        hasError = true;
         // Synchronize to continue parsing despite errors
         synchronize();
     }

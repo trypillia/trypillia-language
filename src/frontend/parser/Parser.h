@@ -12,6 +12,7 @@ class Parser
   public:
     Parser(Lexer &lexer);
     ASTNode *parse();
+    bool hasError = false;
 
   private:
     Lexer &lexer;
