@@ -52,6 +52,8 @@ enum class FFIType
 
 static bool parseType(const std::string &s, FFIType &out)
 {
+    if (s == "...")
+        return true;
     if (s == "void")
         out = FFIType::Void;
     else if (s == "int32")
@@ -367,11 +369,17 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
             err = "argument types must be a list of strings";
             return false;
         }
-        FFIType t;
-        if (!parseType(el.asString()->flatten(), t) || t == FFIType::Void)
+        std::string typeStr = el.asString()->flatten();
+        if (typeStr == "...")
         {
-            err = "invalid argument type '" + el.asString()->flatten() + "' (expected one of: " + VALID_TYPES_MSG +
-                  ", excluding void)";
+            out.push_back(FFIType::Void); // marker for varargs separator
+            continue;
+        }
+        FFIType t;
+        if (!parseType(typeStr, t) || t == FFIType::Void)
+        {
+            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG +
+                  ", excluding void and ...)";
             return false;
         }
         out.push_back(t);
