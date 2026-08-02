@@ -133,12 +133,15 @@ StmtNode *Parser::ifStatement()
 
 StmtNode *Parser::whileStatement()
 {
+    Token keywordWhile = previousToken;
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
     ExprNode *condition = expression();
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
     StmtNode *body = statement();
 
-    return new WhileStmt(condition, body);
+    return new WhileStmt(keywordWhile, leftParen, condition, rightParen, body);
 }
 
 StmtNode *Parser::doWhileStatement()
