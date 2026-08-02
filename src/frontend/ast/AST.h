@@ -109,9 +109,10 @@ class GetExpr : public ExprNode
 {
   public:
     ExprNode *object;
+    Token dot;
     Token name;
 
-    GetExpr(ExprNode *object, Token name) : object(object), name(name)
+    GetExpr(ExprNode *object, Token dot, Token name) : object(object), dot(dot), name(name)
     {
     }
 
@@ -814,9 +815,11 @@ class StaticGetExpr : public ExprNode
 {
   public:
     Token className;
+    Token colonColon;
     Token memberName;
 
-    StaticGetExpr(Token className, Token memberName) : className(className), memberName(memberName)
+    StaticGetExpr(Token className, Token colonColon, Token memberName)
+        : className(className), colonColon(colonColon), memberName(memberName)
     {
     }
 
