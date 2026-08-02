@@ -255,6 +255,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_ADD): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -264,15 +265,8 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            if (tosInFR0)
-            {
-                emitter.emitAddMemToFR0(sp - 2);
-            }
-            else
-            {
-                emitter.emitAdd(sp - 2, sp - 1);
-                emitter.emitGetLocalToFR0(sp - 2); // Put result in FR0
-            }
+            emitter.emitAdd(sp - 2, sp - 1);
+            emitter.emitGetLocalToFR0(sp - 2); // Put result in FR0
             tosInFR0 = true;
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -281,6 +275,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_SUBTRACT): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -290,15 +285,8 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            if (tosInFR0)
-            {
-                emitter.emitSubMemToFR0(sp - 2);
-            }
-            else
-            {
-                emitter.emitSub(sp - 2, sp - 1);
-                emitter.emitGetLocalToFR0(sp - 2);
-            }
+            emitter.emitSub(sp - 2, sp - 1);
+            emitter.emitGetLocalToFR0(sp - 2);
             tosInFR0 = true;
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -307,6 +295,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_MULTIPLY): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -316,13 +305,8 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            if (tosInFR0)
-                emitter.emitMulMemToFR0(sp - 2);
-            else
-            {
-                emitter.emitMul(sp - 2, sp - 1);
-                emitter.emitGetLocalToFR0(sp - 2);
-            }
+            emitter.emitMul(sp - 2, sp - 1);
+            emitter.emitGetLocalToFR0(sp - 2);
             tosInFR0 = true;
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -331,6 +315,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_DIVIDE): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -340,13 +325,8 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            if (tosInFR0)
-                emitter.emitDivMemToFR0(sp - 2);
-            else
-            {
-                emitter.emitDiv(sp - 2, sp - 1);
-                emitter.emitGetLocalToFR0(sp - 2);
-            }
+            emitter.emitDiv(sp - 2, sp - 1);
+            emitter.emitGetLocalToFR0(sp - 2);
             tosInFR0 = true;
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -484,13 +464,13 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_NEGATE): {
             if (sp < 1)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: operand must be a number
             {
                 struct sljit_jump *failA = nullptr;
                 emitter.emitTypeCheck(sp - 1, &failA);
                 deoptJumps.push_back(failA);
             }
-            flushTos(sp);
             emitter.emitNegate(sp - 1);
             typeStack[sp - 1] = InferredType::NUMBER;
             break;
@@ -498,6 +478,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_MOD): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -507,7 +488,6 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            flushTos(sp);
             emitter.emitMod(sp - 2, sp - 1);
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -524,6 +504,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_BIT_AND): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -533,7 +514,6 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            flushTos(sp);
             emitter.emitBitAnd(sp - 2, sp - 1);
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -542,6 +522,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_BIT_OR): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -551,7 +532,6 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            flushTos(sp);
             emitter.emitBitOr(sp - 2, sp - 1);
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -560,6 +540,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_BIT_XOR): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -569,7 +550,6 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            flushTos(sp);
             emitter.emitBitXor(sp - 2, sp - 1);
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -578,13 +558,13 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_BIT_NOT): {
             if (sp < 1)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: operand must be a number
             {
                 struct sljit_jump *failA = nullptr;
                 emitter.emitTypeCheck(sp - 1, &failA);
                 deoptJumps.push_back(failA);
             }
-            flushTos(sp);
             emitter.emitBitNot(sp - 1);
             typeStack[sp - 1] = InferredType::NUMBER;
             break;
@@ -592,6 +572,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_BIT_SHIFT_LEFT): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -601,7 +582,6 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            flushTos(sp);
             emitter.emitBitShl(sp - 2, sp - 1);
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
@@ -610,6 +590,7 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
         case static_cast<uint8_t>(OpCode::OP_BIT_SHIFT_RIGHT): {
             if (sp < 2)
                 return (printf("JIT Abort at line %d\n", __LINE__), nullptr);
+            flushTos(sp);
             // Type guard: both operands must be numbers
             {
                 struct sljit_jump *failA = nullptr;
@@ -619,7 +600,6 @@ JitFunc JITCompiler::compileMathFunction(ObjFunction *function)
                 deoptJumps.push_back(failA);
                 deoptJumps.push_back(failB);
             }
-            flushTos(sp);
             emitter.emitBitShr(sp - 2, sp - 1);
             typeStack[sp - 2] = InferredType::NUMBER;
             sp--;
