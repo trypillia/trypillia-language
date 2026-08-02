@@ -44,7 +44,22 @@ void FormatterVisitor::printToken(const Token &token)
     if (token.type == TokenType::UNKNOWN)
         return;
 
-    // TODO: Handle leading and trailing trivia (comments) when they are fully implemented
+    // Extract and print comments from leading trivia
+    if (!token.leadingTrivia.empty())
+    {
+        size_t pos = 0;
+        while ((pos = token.leadingTrivia.find("//", pos)) != std::string::npos)
+        {
+            size_t endPos = token.leadingTrivia.find('\n', pos);
+            if (endPos == std::string::npos)
+                endPos = token.leadingTrivia.length();
+
+            std::string comment = token.leadingTrivia.substr(pos, endPos - pos);
+            output += comment + "\n";
+            printIndent();
+            pos = endPos;
+        }
+    }
     if (token.type == TokenType::STRING)
     {
         // Really basic string escaping for the formatter for now
