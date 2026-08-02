@@ -87,10 +87,12 @@ StmtNode *Parser::expressionStatement()
 
 StmtNode *Parser::loadStatement()
 {
+    Token keywordLoad = previousToken;
     Token filename = currentToken;
     consume(TokenType::STRING);
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
-    return new LoadStmt(filename);
+    return new LoadStmt(keywordLoad, filename, semicolon);
 }
 
 StmtNode *Parser::block()
