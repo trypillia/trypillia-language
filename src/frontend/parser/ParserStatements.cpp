@@ -1046,15 +1046,20 @@ StmtNode *Parser::parseUseStatement()
 
     Token keywordAs;
     keywordAs.type = TokenType::UNKNOWN;
-
-    // We don't currently parse 'as alias', but if we did we'd match it here
     Token aliasToken = nameToken;
     aliasToken.lexeme = lastId;
+
+    if (match(TokenType::AS))
+    {
+        keywordAs = previousToken;
+        aliasToken = currentToken;
+        consume(TokenType::IDENTIFIER);
+    }
 
     Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
 
-    this->useAliases[lastId] = fqn;
+    this->useAliases[aliasToken.lexeme] = fqn;
 
     Token fqnToken = nameToken;
     fqnToken.lexeme = fqn;
