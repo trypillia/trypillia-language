@@ -618,11 +618,18 @@ class ForStmt : public StmtNode
 class ForeachStmt : public StmtNode
 {
   public:
+    Token keywordFor;
+    Token leftParen;
     Token name;
+    Token keywordIn;
     ExprNode *iterable;
+    Token rightParen;
     StmtNode *body;
 
-    ForeachStmt(Token name, ExprNode *iterable, StmtNode *body) : name(name), iterable(iterable), body(body)
+    ForeachStmt(Token keywordFor, Token leftParen, Token name, Token keywordIn, ExprNode *iterable, Token rightParen,
+                StmtNode *body)
+        : keywordFor(keywordFor), leftParen(leftParen), name(name), keywordIn(keywordIn), iterable(iterable),
+          rightParen(rightParen), body(body)
     {
     }
 
