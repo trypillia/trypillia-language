@@ -341,9 +341,12 @@ class ListExpr : public ExprNode
 class DictExpr : public ExprNode
 {
   public:
+    Token leftBrace;
     std::vector<std::pair<ExprNode *, ExprNode *>> elements; // key, value
+    Token rightBrace;
 
-    DictExpr(std::vector<std::pair<ExprNode *, ExprNode *>> elements) : elements(elements)
+    DictExpr(Token leftBrace, std::vector<std::pair<ExprNode *, ExprNode *>> elements, Token rightBrace)
+        : leftBrace(leftBrace), elements(elements), rightBrace(rightBrace)
     {
     }
 
