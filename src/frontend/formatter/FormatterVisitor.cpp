@@ -48,6 +48,8 @@ void FormatterVisitor::printToken(const Token &token)
     if (!token.leadingTrivia.empty())
     {
         size_t pos = 0;
+        size_t firstNewline = token.leadingTrivia.find('\n');
+
         while ((pos = token.leadingTrivia.find("//", pos)) != std::string::npos)
         {
             size_t endPos = token.leadingTrivia.find('\n', pos);
@@ -55,8 +57,25 @@ void FormatterVisitor::printToken(const Token &token)
                 endPos = token.leadingTrivia.length();
 
             std::string comment = token.leadingTrivia.substr(pos, endPos - pos);
-            output += comment + "\n";
-            printIndent();
+
+            bool isSameLine = !output.empty() && (firstNewline == std::string::npos || pos < firstNewline);
+
+            if (isSameLine)
+            {
+                // Backtrack output to append to the previous line
+                while (!output.empty() && (output.back() == ' ' || output.back() == '\t' || output.back() == '\n'))
+                {
+                    output.pop_back();
+                }
+                output += " " + comment + "\n";
+                printIndent();
+            }
+            else
+            {
+                output += comment + "\n";
+                printIndent();
+            }
+
             pos = endPos;
         }
     }
