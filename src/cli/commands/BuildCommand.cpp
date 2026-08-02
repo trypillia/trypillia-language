@@ -6,13 +6,13 @@
 #include <iterator>
 #include <string>
 
-#include "frontend/ast/ASTOptimizer.h"
-#include "frontend/lexer/Lexer.h"
-#include "frontend/parser/Parser.h"
-#include "frontend/semantic/SemanticAnalyzer.h"
-#include "vm/compiler/BytecodeCompiler.h"
-#include "vm/core/VM.h"
-#include "vm/serializer/Serializer.h"
+#include "../../frontend/ast/ASTOptimizer.h"
+#include "../../frontend/lexer/Lexer.h"
+#include "../../frontend/parser/Parser.h"
+#include "../../frontend/semantic/SemanticAnalyzer.h"
+#include "../../vm/compiler/BytecodeCompiler.h"
+#include "../../vm/core/VM.h"
+#include "../../vm/serializer/Serializer.h"
 
 namespace cli
 {

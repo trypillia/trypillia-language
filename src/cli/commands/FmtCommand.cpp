@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "frontend/formatter/FormatterVisitor.h"
-#include "frontend/lexer/Lexer.h"
-#include "frontend/parser/Parser.h"
+#include "../../frontend/formatter/FormatterVisitor.h"
+#include "../../frontend/lexer/Lexer.h"
+#include "../../frontend/parser/Parser.h"
 
 namespace cli
 {

@@ -3,13 +3,13 @@
 #include <iostream>
 #include <string>
 
-#include "Command.h"
+#include "../native/os/OS.h"
+#include "../vm/core/VM.h"
+#include "../vm/serializer/Serializer.h"
 #include "Help.h"
 #include "Options.h"
 #include "Version.h"
-#include "native/os/OS.h"
-#include "vm/core/VM.h"
-#include "vm/serializer/Serializer.h"
+#include "commands/Command.h"
 
 #ifdef _WIN32
 #include <windows.h>
