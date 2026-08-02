@@ -1139,7 +1139,11 @@ class CompilerVisitor : public ASTVisitor
         }
         if (!hasInit)
         {
-            auto dummyInit = new FunctionNode("init", {}, {});
+            Token emptyToken;
+            emptyToken.type = TokenType::UNKNOWN;
+            auto dummyInit = new FunctionNode("init", emptyToken, emptyToken, emptyToken, {}, emptyToken, emptyToken,
+                                              {}, emptyToken, emptyToken);
+            dummyInit->accessModifier = AccessModifier::PUBLIC;
             compileMethod(dummyInit, node);
             delete dummyInit;
         }
