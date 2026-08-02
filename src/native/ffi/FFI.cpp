@@ -396,7 +396,8 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
         FFIType t;
         if (!parseType(typeStr, t) || t == FFIType::Void)
         {
-            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG + ", excluding void)";
+            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG +
+                  ", excluding void)";
             return false;
         }
         out.push_back(t);
@@ -409,23 +410,33 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
 static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FFIType> &argTypes, VMValue *args,
                               int startIdx, int provided)
 {
-    if (provided != (int)argTypes.size())
+    int expected = 0;
+    for (size_t i = 0; i < argTypes.size(); i++)
     {
-        return makeResultErr(currentVM, "expected " + std::to_string(argTypes.size()) + " argument(s) but got " +
+        if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
+        {
+            break;
+        }
+        expected++;
+    }
+
+    if (provided != expected)
+    {
+        return makeResultErr(currentVM, "expected " + std::to_string(expected) + " argument(s) but got " +
                                             std::to_string(provided));
     }
 
     std::deque<std::string> stringStorage;
     std::vector<RawSlot> raw(argTypes.size());
-    for (size_t i = 0; i < (size_t)provided && i < argTypes.size(); i++)
+    for (int i = 0; i < provided; i++)
     {
         if (argTypes[i] == FFIType::Void)
         {
-            return makeResultErr(currentVM,
-                                 "internal error: unexpected varargs sentinel at argument " + std::to_string(i + 1));
+            return makeResultErr(currentVM, "internal error: unexpected varargs sentinel at argument " +
+                                                std::to_string(i + 1));
         }
         std::string err;
-        if (!marshalArg(args[startIdx + (int)i], argTypes[i], stringStorage, raw[i], err))
+        if (!marshalArg(args[startIdx + i], argTypes[i], stringStorage, raw[i], err))
         {
             return makeResultErr(currentVM, "argument " + std::to_string(i + 1) + ": " + err);
         }
