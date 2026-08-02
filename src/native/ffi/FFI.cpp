@@ -396,8 +396,7 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
         FFIType t;
         if (!parseType(typeStr, t) || t == FFIType::Void)
         {
-            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG +
-                  ", excluding void)";
+            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG + ", excluding void)";
             return false;
         }
         out.push_back(t);
@@ -432,8 +431,8 @@ static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FF
     {
         if (argTypes[i] == FFIType::Void)
         {
-            return makeResultErr(currentVM, "internal error: unexpected varargs sentinel at argument " +
-                                                std::to_string(i + 1));
+            return makeResultErr(currentVM,
+                                 "internal error: unexpected varargs sentinel at argument " + std::to_string(i + 1));
         }
         std::string err;
         if (!marshalArg(args[startIdx + i], argTypes[i], stringStorage, raw[i], err))
