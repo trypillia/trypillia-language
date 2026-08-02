@@ -252,9 +252,10 @@ class AssignExpr : public ExprNode
 {
   public:
     Token name;
+    Token assign;
     ExprNode *value;
 
-    AssignExpr(Token name, ExprNode *value) : name(name), value(value)
+    AssignExpr(Token name, Token assign, ExprNode *value) : name(name), assign(assign), value(value)
     {
     }
     ~AssignExpr()
