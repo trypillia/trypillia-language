@@ -146,14 +146,24 @@ StmtNode *Parser::whileStatement()
 
 StmtNode *Parser::doWhileStatement()
 {
+    Token keywordDo = previousToken;
     StmtNode *body = statement();
+
+    Token keywordWhile = currentToken;
     consume(TokenType::WHILE);
+
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
+
     ExprNode *condition = expression();
+
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
+
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
 
-    return new DoWhileStmt(condition, body);
+    return new DoWhileStmt(keywordDo, body, keywordWhile, leftParen, condition, rightParen, semicolon);
 }
 
 StmtNode *Parser::returnStatement()
