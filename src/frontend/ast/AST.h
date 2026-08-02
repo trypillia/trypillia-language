@@ -184,11 +184,13 @@ class TernaryExpr : public ExprNode
 {
   public:
     ExprNode *condition;
+    Token question;
     ExprNode *thenBranch;
+    Token colon;
     ExprNode *elseBranch;
 
-    TernaryExpr(ExprNode *condition, ExprNode *thenBranch, ExprNode *elseBranch)
-        : condition(condition), thenBranch(thenBranch), elseBranch(elseBranch)
+    TernaryExpr(ExprNode *condition, Token question, ExprNode *thenBranch, Token colon, ExprNode *elseBranch)
+        : condition(condition), question(question), thenBranch(thenBranch), colon(colon), elseBranch(elseBranch)
     {
     }
 
