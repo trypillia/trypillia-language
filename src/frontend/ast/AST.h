@@ -577,8 +577,9 @@ class ContinueStmt : public StmtNode
 {
   public:
     Token keyword;
+    Token semicolon;
 
-    ContinueStmt(Token keyword) : keyword(keyword)
+    ContinueStmt(Token keyword, Token semicolon) : keyword(keyword), semicolon(semicolon)
     {
     }
 
