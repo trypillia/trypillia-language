@@ -154,13 +154,15 @@ StmtNode *Parser::returnStatement()
 
     if (currentToken.type == TokenType::SEMICOLON)
     {
+        Token semicolon = currentToken;
         advance();
-        return new ReturnStmt(keyword, nullptr);
+        return new ReturnStmt(keyword, nullptr, semicolon);
     }
 
     ExprNode *value = expression();
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
-    return new ReturnStmt(keyword, value);
+    return new ReturnStmt(keyword, value, semicolon);
 }
 
 StmtNode *Parser::breakStatement()
