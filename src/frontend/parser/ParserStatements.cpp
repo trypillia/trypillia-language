@@ -950,6 +950,7 @@ StmtNode *Parser::parseNamespaceDeclaration()
 
 StmtNode *Parser::parseUseStatement()
 {
+    Token keywordUse = previousToken;
     Token nameToken = currentToken;
     std::string fqn = "";
     std::string lastId = "";
@@ -969,13 +970,20 @@ StmtNode *Parser::parseUseStatement()
         }
     } while (true);
 
+    Token keywordAs;
+    keywordAs.type = TokenType::UNKNOWN;
+
+    // We don't currently parse 'as alias', but if we did we'd match it here
+    Token aliasToken = nameToken;
+    aliasToken.lexeme = lastId;
+
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
 
     this->useAliases[lastId] = fqn;
 
     Token fqnToken = nameToken;
     fqnToken.lexeme = fqn;
-    Token aliasToken = nameToken;
-    aliasToken.lexeme = lastId;
-    return new UseStmt(fqnToken, aliasToken);
+
+    return new UseStmt(keywordUse, fqnToken, keywordAs, aliasToken, semicolon);
 }
