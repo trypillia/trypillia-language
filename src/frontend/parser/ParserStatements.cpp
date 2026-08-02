@@ -298,8 +298,9 @@ StmtNode *Parser::usingStatement()
 
 StmtNode *Parser::forStatement()
 {
+    Token keywordFor = currentToken;
     advance(); // consume FOR
-
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
 
     // Check for foreach: for (let x in iterable)
@@ -330,15 +331,18 @@ StmtNode *Parser::forStatement()
         Token dummySemicolon;
         dummySemicolon.type = TokenType::UNKNOWN;
         StmtNode *initializer = new VarStmt(keyword, name, assign, initExpr, dummySemicolon);
+        Token semicolon1 = currentToken;
         consume(TokenType::SEMICOLON);
-        return finishForLoop(initializer);
+        return finishForLoop(keywordFor, leftParen, initializer, semicolon1);
     }
 
     // Regular for without var initializer
     StmtNode *initializer = nullptr;
+    Token semicolon1;
     if (currentToken.type == TokenType::SEMICOLON)
     {
-        advance(); // no initializer
+        semicolon1 = currentToken;
+        advance(); // consume semicolon
     }
     else
     {
@@ -346,12 +350,14 @@ StmtNode *Parser::forStatement()
         Token dummySemicolon;
         dummySemicolon.type = TokenType::UNKNOWN;
         initializer = new ExpressionStmt(expr, dummySemicolon);
+        semicolon1 = currentToken;
+        consume(TokenType::SEMICOLON);
     }
-    consume(TokenType::SEMICOLON);
-    return finishForLoop(initializer);
+
+    return finishForLoop(keywordFor, leftParen, initializer, semicolon1);
 }
 
-StmtNode *Parser::finishForLoop(StmtNode *initializer)
+StmtNode *Parser::finishForLoop(Token keywordFor, Token leftParen, StmtNode *initializer, Token semicolon1)
 {
     // Condition (optional, default true)
     ExprNode *condition = nullptr;
@@ -359,6 +365,7 @@ StmtNode *Parser::finishForLoop(StmtNode *initializer)
     {
         condition = expression();
     }
+    Token semicolon2 = currentToken;
     consume(TokenType::SEMICOLON);
 
     // Increment (optional)
@@ -367,11 +374,13 @@ StmtNode *Parser::finishForLoop(StmtNode *initializer)
     {
         increment = expression();
     }
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
 
     StmtNode *body = statement();
 
-    return new ForStmt(initializer, condition, increment, body);
+    return new ForStmt(keywordFor, leftParen, initializer, semicolon1, condition, semicolon2, increment, rightParen,
+                       body);
 }
 
 StmtNode *Parser::statement()
