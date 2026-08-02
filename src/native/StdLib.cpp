@@ -1,5 +1,6 @@
 #include "core/Core.h"
 #include "crypto/Crypto.h"
+#include "ffi/FFI.h"
 #include "fs/FS.h"
 #include "list/List.h"
 #include "map/Map.h"
@@ -39,6 +40,7 @@ void registerAll(VM *vm)
     WebSocketModule::registerAll(vm);
     Test::registerAll(vm);
     PromiseModule::registerAll(vm);
+    FFIModule::registerAll(vm);
 }
 
 void registerSymbols(SymbolTable *scope)
@@ -61,6 +63,7 @@ void registerSymbols(SymbolTable *scope)
     WebSocketModule::registerSymbols(scope);
     Test::registerSymbols(scope);
     PromiseModule::registerSymbols(scope);
+    FFIModule::registerSymbols(scope);
 }
 
 VMValue makeResultOk(VM *vm, VMValue value)
