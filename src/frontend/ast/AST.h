@@ -631,10 +631,18 @@ class ForeachStmt : public StmtNode
 class DoWhileStmt : public StmtNode
 {
   public:
-    ExprNode *condition;
+    Token keywordDo;
     StmtNode *body;
+    Token keywordWhile;
+    Token leftParen;
+    ExprNode *condition;
+    Token rightParen;
+    Token semicolon;
 
-    DoWhileStmt(ExprNode *condition, StmtNode *body) : condition(condition), body(body)
+    DoWhileStmt(Token keywordDo, StmtNode *body, Token keywordWhile, Token leftParen, ExprNode *condition,
+                Token rightParen, Token semicolon)
+        : keywordDo(keywordDo), body(body), keywordWhile(keywordWhile), leftParen(leftParen), condition(condition),
+          rightParen(rightParen), semicolon(semicolon)
     {
     }
 
