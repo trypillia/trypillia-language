@@ -465,7 +465,7 @@ class CompilerVisitor : public ASTVisitor
     }
     void visit(CallExpr *node) override
     {
-        currentLine = node->paren.line;
+        currentLine = node->rightParen.line;
         node->callee->accept(this);
         for (auto &arg : node->arguments)
             arg->accept(this);
