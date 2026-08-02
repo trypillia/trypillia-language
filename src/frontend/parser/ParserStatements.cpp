@@ -525,11 +525,13 @@ FieldDeclNode *Parser::parseFieldDecl(AccessModifier accessModifier)
 
 FunctionNode *Parser::parseFunction(AccessModifier accessModifier, bool isAbstract, bool isStatic)
 {
+    Token keywordFn = currentToken;
     consume(TokenType::FN);
 
     Token name = currentToken;
     consume(TokenType::IDENTIFIER);
 
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
     std::vector<Parameter> parameters;
 
@@ -548,12 +550,19 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier, bool isAbstra
         } while (match(TokenType::COMMA));
     }
 
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
 
     if (isAbstract)
     {
+        Token semicolon = currentToken;
         consume(TokenType::SEMICOLON);
-        FunctionNode *node = new FunctionNode(name.lexeme, parameters, {});
+        Token emptyLeftBrace;
+        emptyLeftBrace.type = TokenType::UNKNOWN;
+        Token emptyRightBrace;
+        emptyRightBrace.type = TokenType::UNKNOWN;
+        FunctionNode *node = new FunctionNode(name.lexeme, keywordFn, name, leftParen, parameters, rightParen,
+                                              emptyLeftBrace, {}, emptyRightBrace, semicolon);
         node->accessModifier = accessModifier;
         node->isAbstract = true;
         node->isStatic = isStatic;
@@ -561,6 +570,7 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier, bool isAbstra
     }
 
     // Parse function body
+    Token leftBrace = currentToken;
     consume(TokenType::LBRACE);
     std::vector<StmtNode *> body;
 
@@ -569,9 +579,13 @@ FunctionNode *Parser::parseFunction(AccessModifier accessModifier, bool isAbstra
         body.push_back(dynamic_cast<StmtNode *>(declaration()));
     }
 
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
 
-    FunctionNode *node = new FunctionNode(name.lexeme, parameters, body);
+    Token emptySemicolon;
+    emptySemicolon.type = TokenType::UNKNOWN;
+    FunctionNode *node = new FunctionNode(name.lexeme, keywordFn, name, leftParen, parameters, rightParen, leftBrace,
+                                          body, rightBrace, emptySemicolon);
     node->accessModifier = accessModifier;
     node->isStatic = isStatic;
     return node;
@@ -643,15 +657,21 @@ ClassNode *Parser::parseClass()
         }
         else if (currentToken.type == TokenType::DESTROY)
         {
+            Token destroyKeyword = currentToken;
             advance();
+            Token leftBrace = currentToken;
             consume(TokenType::LBRACE);
             std::vector<StmtNode *> body;
             while (currentToken.type != TokenType::RBRACE && currentToken.type != TokenType::END_OF_FILE)
             {
                 body.push_back(dynamic_cast<StmtNode *>(declaration()));
             }
+            Token rightBrace = currentToken;
             consume(TokenType::RBRACE);
-            auto node = new FunctionNode("destroy", {}, body);
+            Token emptyToken;
+            emptyToken.type = TokenType::UNKNOWN;
+            auto node = new FunctionNode("destroy", destroyKeyword, destroyKeyword, emptyToken, {}, emptyToken,
+                                         leftBrace, body, rightBrace, emptyToken);
             node->accessModifier = memberAccess;
             methods.push_back(node);
         }
@@ -717,11 +737,13 @@ InterfaceNode *Parser::parseInterface()
     {
         if (currentToken.type == TokenType::FN)
         {
+            Token keywordFn = currentToken;
             advance();
 
             Token methodName = currentToken;
             consume(TokenType::IDENTIFIER);
 
+            Token leftParen = currentToken;
             consume(TokenType::LPAREN);
             std::vector<Parameter> parameters;
             if (currentToken.type != TokenType::RPAREN)
@@ -738,10 +760,15 @@ InterfaceNode *Parser::parseInterface()
                     parameters.push_back({param.lexeme, defVal});
                 } while (match(TokenType::COMMA));
             }
+            Token rightParen = currentToken;
             consume(TokenType::RPAREN);
+            Token semicolon = currentToken;
             consume(TokenType::SEMICOLON);
 
-            auto method = new FunctionNode(methodName.lexeme, parameters, {});
+            Token emptyToken;
+            emptyToken.type = TokenType::UNKNOWN;
+            auto method = new FunctionNode(methodName.lexeme, keywordFn, methodName, leftParen, parameters, rightParen,
+                                           emptyToken, {}, emptyToken, semicolon);
             method->isAbstract = true;
             methods.push_back(method);
         }
@@ -779,11 +806,13 @@ TraitNode *Parser::parseTrait()
     {
         if (currentToken.type == TokenType::FN)
         {
+            Token keywordFn = currentToken;
             advance();
 
             Token methodName = currentToken;
             consume(TokenType::IDENTIFIER);
 
+            Token leftParen = currentToken;
             consume(TokenType::LPAREN);
             std::vector<Parameter> parameters;
             if (currentToken.type != TokenType::RPAREN)
@@ -800,27 +829,37 @@ TraitNode *Parser::parseTrait()
                     parameters.push_back({param.lexeme, defVal});
                 } while (match(TokenType::COMMA));
             }
+            Token rightParen = currentToken;
             consume(TokenType::RPAREN);
 
             if (currentToken.type == TokenType::SEMICOLON)
             {
                 // Abstract method
+                Token semicolon = currentToken;
                 advance();
-                auto method = new FunctionNode(methodName.lexeme, parameters, {});
+                Token emptyToken;
+                emptyToken.type = TokenType::UNKNOWN;
+                auto method = new FunctionNode(methodName.lexeme, keywordFn, methodName, leftParen, parameters,
+                                               rightParen, emptyToken, {}, emptyToken, semicolon);
                 method->isAbstract = true;
                 methods.push_back(method);
             }
             else
             {
                 // Method with body
+                Token leftBrace = currentToken;
                 consume(TokenType::LBRACE);
                 std::vector<StmtNode *> body;
                 while (currentToken.type != TokenType::RBRACE && currentToken.type != TokenType::END_OF_FILE)
                 {
                     body.push_back(dynamic_cast<StmtNode *>(declaration()));
                 }
+                Token rightBrace = currentToken;
                 consume(TokenType::RBRACE);
-                auto method = new FunctionNode(methodName.lexeme, parameters, body);
+                Token emptyToken;
+                emptyToken.type = TokenType::UNKNOWN;
+                auto method = new FunctionNode(methodName.lexeme, keywordFn, methodName, leftParen, parameters,
+                                               rightParen, leftBrace, body, rightBrace, emptyToken);
                 methods.push_back(method);
             }
         }
