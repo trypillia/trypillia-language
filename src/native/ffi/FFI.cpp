@@ -267,7 +267,11 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
     {
         if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
         {
-            break;
+            continue;
+        }
+        if (argTypes[i] == FFIType::Void)
+        {
+            continue;
         }
         switch (argTypes[i])
         {
@@ -287,7 +291,6 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         default:
             return makeResultErr(currentVM, "unsupported argument type");
         }
-        fixedRaw.push_back(raw[i]);
     }
 
     ffi_type *ffiRet = &ffi_type_void;
@@ -313,19 +316,39 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         break;
     }
 
+    size_t fixedCount = 0;
+    bool hasVarargs = false;
+    for (size_t i = 0; i < argTypes.size(); i++)
+    {
+        if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
+        {
+            hasVarargs = true;
+            break;
+        }
+        fixedCount++;
+    }
+
     ffi_cif cif;
-    ffi_status status =
-        ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)ffiArgTypes.size(), ffiRet, ffiArgTypes.data());
+    ffi_status status;
+    if (hasVarargs)
+    {
+        status = ffi_prep_cif_var(&cif, FFI_DEFAULT_ABI, (unsigned int)fixedCount, (unsigned int)ffiArgTypes.size(),
+                                  ffiRet, ffiArgTypes.data());
+    }
+    else
+    {
+        status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)ffiArgTypes.size(), ffiRet, ffiArgTypes.data());
+    }
     if (status != FFI_OK)
     {
         return makeResultErr(currentVM, "ffi_prep_cif failed");
     }
 
     std::vector<void *> values;
-    values.reserve(fixedRaw.size());
-    for (size_t i = 0; i < fixedRaw.size(); i++)
+    values.reserve(provided);
+    for (int i = 0; i < provided; i++)
     {
-        values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&fixedRaw[i])));
+        values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&raw[i])));
     }
 
     union {
@@ -414,7 +437,11 @@ static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FF
     {
         if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
         {
-            break;
+            continue;
+        }
+        if (argTypes[i] == FFIType::Void)
+        {
+            continue;
         }
         expected++;
     }
@@ -427,21 +454,28 @@ static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FF
 
     std::deque<std::string> stringStorage;
     std::vector<RawSlot> raw(argTypes.size());
-    for (int i = 0; i < provided; i++)
+    int rawIdx = 0;
+    int argIdx = 0;
+    for (size_t i = 0; argIdx < provided && i < argTypes.size(); i++)
     {
+        if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
+        {
+            continue;
+        }
         if (argTypes[i] == FFIType::Void)
         {
-            return makeResultErr(currentVM,
-                                 "internal error: unexpected varargs sentinel at argument " + std::to_string(i + 1));
+            continue;
         }
         std::string err;
-        if (!marshalArg(args[startIdx + i], argTypes[i], stringStorage, raw[i], err))
+        if (!marshalArg(args[startIdx + argIdx], argTypes[i], stringStorage, raw[rawIdx], err))
         {
             return makeResultErr(currentVM, "argument " + std::to_string(i + 1) + ": " + err);
         }
+        rawIdx++;
+        argIdx++;
     }
 
-    VMValue result = callDynamic(fnPtr, retType, argTypes, raw, provided);
+    VMValue result = callDynamic(fnPtr, retType, argTypes, raw, rawIdx);
     return makeResultOk(currentVM, result);
 }
 
