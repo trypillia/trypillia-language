@@ -408,9 +408,12 @@ class IndexGetExpr : public ExprNode
 {
   public:
     ExprNode *object;
+    Token leftBracket;
     ExprNode *index;
+    Token rightBracket;
 
-    IndexGetExpr(ExprNode *object, ExprNode *index) : object(object), index(index)
+    IndexGetExpr(ExprNode *object, Token leftBracket, ExprNode *index, Token rightBracket)
+        : object(object), leftBracket(leftBracket), index(index), rightBracket(rightBracket)
     {
     }
 
@@ -427,10 +430,14 @@ class IndexSetExpr : public ExprNode
 {
   public:
     ExprNode *object;
+    Token leftBracket;
     ExprNode *index;
+    Token rightBracket;
+    Token op;
     ExprNode *value;
 
-    IndexSetExpr(ExprNode *object, ExprNode *index, ExprNode *value) : object(object), index(index), value(value)
+    IndexSetExpr(ExprNode *object, Token leftBracket, ExprNode *index, Token rightBracket, Token op, ExprNode *value)
+        : object(object), leftBracket(leftBracket), index(index), rightBracket(rightBracket), op(op), value(value)
     {
     }
 
