@@ -204,9 +204,13 @@ StmtNode *Parser::continueStatement()
 
 StmtNode *Parser::switchStatement()
 {
+    Token keywordSwitch = previousToken;
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
     ExprNode *expr = expression();
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
+    Token leftBrace = currentToken;
     consume(TokenType::LBRACE);
 
     std::vector<SwitchStmt::Case> cases;
@@ -215,7 +219,9 @@ StmtNode *Parser::switchStatement()
     {
         if (match(TokenType::CASE))
         {
+            Token keywordCaseOrDefault = previousToken;
             ExprNode *value = expression();
+            Token colon = currentToken;
             consume(TokenType::COLON);
 
             std::vector<StmtNode *> body;
@@ -225,10 +231,12 @@ StmtNode *Parser::switchStatement()
                 body.push_back(statement());
             }
 
-            cases.push_back({value, body});
+            cases.push_back({keywordCaseOrDefault, value, colon, body});
         }
         else if (match(TokenType::DEFAULT))
         {
+            Token keywordCaseOrDefault = previousToken;
+            Token colon = currentToken;
             consume(TokenType::COLON);
 
             std::vector<StmtNode *> body;
@@ -238,7 +246,7 @@ StmtNode *Parser::switchStatement()
                 body.push_back(statement());
             }
 
-            cases.push_back({nullptr, body});
+            cases.push_back({keywordCaseOrDefault, nullptr, colon, body});
         }
         else
         {
@@ -246,8 +254,9 @@ StmtNode *Parser::switchStatement()
         }
     }
 
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
-    return new SwitchStmt(expr, cases);
+    return new SwitchStmt(keywordSwitch, leftParen, expr, rightParen, leftBrace, cases, rightBrace);
 }
 
 StmtNode *Parser::usingStatement()
