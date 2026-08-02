@@ -188,8 +188,9 @@ StmtNode *Parser::breakStatement()
 {
     Token keyword = currentToken;
     advance();
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
-    return new BreakStmt(keyword);
+    return new BreakStmt(keyword, semicolon);
 }
 
 StmtNode *Parser::continueStatement()
