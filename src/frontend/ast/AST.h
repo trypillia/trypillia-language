@@ -365,10 +365,19 @@ class DictExpr : public ExprNode
 class LambdaExpr : public ExprNode
 {
   public:
+    Token leftParen;
     std::vector<Parameter> params;
+    Token rightParen;
+    Token arrow;
+    bool isExpressionBody;
+    Token leftBrace;
     std::vector<StmtNode *> body;
+    Token rightBrace;
 
-    LambdaExpr(std::vector<Parameter> params, std::vector<StmtNode *> body) : params(params), body(body)
+    LambdaExpr(Token leftParen, std::vector<Parameter> params, Token rightParen, Token arrow, bool isExpressionBody,
+               Token leftBrace, std::vector<StmtNode *> body, Token rightBrace)
+        : leftParen(leftParen), params(params), rightParen(rightParen), arrow(arrow),
+          isExpressionBody(isExpressionBody), leftBrace(leftBrace), body(body), rightBrace(rightBrace)
     {
     }
 
