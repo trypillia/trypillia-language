@@ -618,11 +618,13 @@ ExprNode *Parser::parsePostfix(ExprNode *left, bool canAssign)
 
 ExprNode *Parser::parseTernary(ExprNode *left, bool canAssign)
 {
+    Token question = previousToken;
     ExprNode *thenBranch = expression();
+    Token colon = currentToken;
     consume(TokenType::COLON);
     // Right associative for ternary
     ExprNode *elseBranch = parsePrecedence(PREC_TERNARY);
-    return new TernaryExpr(left, thenBranch, elseBranch);
+    return new TernaryExpr(left, question, thenBranch, colon, elseBranch);
 }
 
 ExprNode *Parser::parseAssignment(ExprNode *left, bool canAssign)
