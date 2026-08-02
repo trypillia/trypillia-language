@@ -31,6 +31,7 @@ static std::unordered_map<std::string, TokenType> keywords = {{"class", TokenTyp
                                                               {"using", TokenType::USING},
                                                               {"namespace", TokenType::NAMESPACE},
                                                               {"use", TokenType::USE},
+                                                              {"as", TokenType::AS},
                                                               {"destroy", TokenType::DESTROY},
                                                               {"switch", TokenType::SWITCH},
                                                               {"case", TokenType::CASE},
@@ -735,6 +736,8 @@ std::string tokenTypeToString(TokenType type)
         return "NAMESPACE";
     case TokenType::USE:
         return "USE";
+    case TokenType::AS:
+        return "AS";
     case TokenType::DESTROY:
         return "DESTROY";
     case TokenType::TRUE:
