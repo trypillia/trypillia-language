@@ -95,7 +95,7 @@ void FormatterVisitor::visit(CallExpr *node)
 
 void FormatterVisitor::visit(ExpressionStmt *node)
 {
-    node->expr->accept(this);
+    node->expression->accept(this);
     printToken(node->semicolon);
     printNewline();
 }
@@ -104,7 +104,7 @@ void FormatterVisitor::visit(VarStmt *node)
 {
     printToken(node->keyword);
     printSpace();
-    printToken(node->nameToken);
+    printToken(node->name);
     if (node->initializer)
     {
         printSpace();
