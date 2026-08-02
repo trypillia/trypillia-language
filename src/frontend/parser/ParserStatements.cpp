@@ -94,6 +94,7 @@ StmtNode *Parser::loadStatement()
 
 StmtNode *Parser::block()
 {
+    Token leftBrace = previousToken;
     std::vector<StmtNode *> statements;
 
     while (currentToken.type != TokenType::RBRACE && currentToken.type != TokenType::END_OF_FILE)
@@ -101,8 +102,9 @@ StmtNode *Parser::block()
         statements.push_back(dynamic_cast<StmtNode *>(declaration()));
     }
 
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
-    return new BlockStmt(statements);
+    return new BlockStmt(leftBrace, statements, rightBrace);
 }
 
 StmtNode *Parser::ifStatement()
