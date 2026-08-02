@@ -67,12 +67,30 @@ class UniversalEmitter : public JitEmitter
 
     ~UniversalEmitter()
     {
+        // sljit_free_compiler() only frees the *builder* object used while
+        // emitting instructions. sljit_generate_code() (called from
+        // finalize()) already copied the final machine code into its own
+        // independently-allocated executable memory block, so freeing the
+        // compiler here is safe and does not affect the generated function.
         if (compiler)
             sljit_free_compiler(compiler);
-        for (char *s : ownedStrings)
-            free(s);
-        for (VMValue **cell : ownedCells)
-            delete cell;
+
+        // IMPORTANT: ownedStrings/ownedCells/stringPool are intentionally
+        // NOT freed here. The generated machine code embeds raw pointers to
+        // these strings/cells as immediates (see cacheString(),
+        // emitGetGlobal(), etc.) so it can inline-cache globals, property
+        // names, etc. That native code keeps running (and dereferencing
+        // those pointers) for as long as the process calls the JIT-compiled
+        // function -- long after this UniversalEmitter (a temporary local
+        // in JITCompiler::compileMathFunction) goes out of scope. Freeing
+        // them here was a use-after-free: the embedded pointers would
+        // dangle, and once the freed heap blocks got reused by later
+        // allocations, the cached "global" pointer would contain garbage,
+        // producing an intermittent SIGSEGV inside the JIT code (reproduced
+        // reliably with fib.try after "JIT compiled fib at call #50"). We
+        // leak this small, fixed-size metadata for the lifetime of the
+        // process; it needs to live exactly as long as the compiled native
+        // function can still be called, which is indefinite.
     }
 
     void setCapturedLocals(const std::vector<int> &slots) override
@@ -82,12 +100,36 @@ class UniversalEmitter : public JitEmitter
 
     void emitPrologue(int maxLocals) override
     {
-        // ABI: void* vm (R0), double* args (R1), int argCount (R2), double n (FR0)
+        // ABI: void* vm, double* args, int argCount, double n (FR0)
+        //
+        // IMPORTANT: SLJIT_ARGS4(F64, W, P, W, F64) declares the 3 integer
+        // arguments WITHOUT the "_R" (scratch-register) suffix. Per sljit's
+        // documented convention (see sljitLir.h, "Argument type
+        // definitions"), integer arguments passed to sljit_emit_enter this
+        // way are placed *directly* into the saved registers S0, S1, S2 (in
+        // order) -- NOT into the scratch registers R0, R1, R2. Only the
+        // "_R" variants (e.g. W_R) route an argument through a scratch
+        // register.
+        //
+        // The code used to follow this with manual
+        //   MOV S0, R0 / MOV S1, R1 / MOV S2, R2
+        // under the mistaken assumption that the incoming vm/args/argCount
+        // values were sitting in R0-R2 and needed to be copied into the
+        // saved registers to survive nested calls. In reality R0-R2 hold
+        // whatever unrelated garbage was left in those scratch registers at
+        // function entry, so those MOVs were overwriting the *correct*
+        // vm_ptr/args_ptr/argCount that sljit_emit_enter had already placed
+        // in S0/S1/S2 with garbage. This is the root cause of the
+        // intermittent SIGSEGV seen after "JIT compiled fib at call #50":
+        // vm_ptr (S0) would end up pointing at whatever R0 happened to
+        // contain, so any later use of it (e.g. resolving the "fib" global
+        // via vm->globals.find(...)) dereferenced a bogus pointer. Since
+        // the garbage value depends on whatever was last computed in R0-R2,
+        // it varies run to run / call to call, which is why the crash was
+        // non-deterministic. sljit_emit_enter already did the right thing;
+        // simply removing these three MOVs fixes it.
         sljit_emit_enter(compiler, 0, SLJIT_ARGS4(F64, W, P, W, F64), 4 | SLJIT_ENTER_FLOAT(4),
                          3 | SLJIT_ENTER_FLOAT(0), 8);
-        sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0); // vm_ptr
-        sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S1, 0, SLJIT_R1, 0); // args_ptr
-        sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_S2, 0, SLJIT_R2, 0); // argCount
 
         // Sync register n (FR0) to virtual stack local 0 (args[1]) for consistency
         sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_MEM1(SLJIT_S1), JIT_FIRST_ARG_SLOT * sizeof(double), SLJIT_FR0,
