@@ -963,10 +963,14 @@ class NamespaceStmt : public StmtNode
 class UseStmt : public StmtNode
 {
   public:
+    Token keywordUse;
     Token name;
+    Token keywordAs; // UNKNOWN type if no alias
     Token alias;
+    Token semicolon;
 
-    UseStmt(Token name, Token alias) : name(name), alias(alias)
+    UseStmt(Token keywordUse, Token name, Token keywordAs, Token alias, Token semicolon)
+        : keywordUse(keywordUse), name(name), keywordAs(keywordAs), alias(alias), semicolon(semicolon)
     {
     }
 
