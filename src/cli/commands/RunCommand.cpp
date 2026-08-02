@@ -19,10 +19,15 @@ namespace cli
 {
 int runCommand(const ParsedArgs &args, const std::string &programName, const std::string &exePath)
 {
-    (void)programName;
     (void)exePath;
 
     const std::string &inputFile = args.file;
+    if (inputFile.empty())
+    {
+        std::cerr << "Usage: " << programName << " [--coverage] <file> [args...]" << std::endl;
+        std::cerr << "Run `" << programName << " --help` for more information." << std::endl;
+        return 1;
+    }
     if (std::filesystem::is_directory(inputFile))
     {
         std::cerr << "Error: " << inputFile << " is a directory. Please provide a source file." << std::endl;
