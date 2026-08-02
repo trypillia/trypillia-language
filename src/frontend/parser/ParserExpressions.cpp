@@ -639,7 +639,7 @@ ExprNode *Parser::parseAssignment(ExprNode *left, bool canAssign)
         }
         else if (GetExpr *getExpr = dynamic_cast<GetExpr *>(left))
         {
-            return new SetExpr(getExpr->object, getExpr->name, value);
+            return new SetExpr(getExpr->object, getExpr->dot, getExpr->name, op, value);
         }
         else if (IndexGetExpr *idxExpr = dynamic_cast<IndexGetExpr *>(left))
         {
@@ -647,7 +647,7 @@ ExprNode *Parser::parseAssignment(ExprNode *left, bool canAssign)
         }
         else if (StaticGetExpr *statExpr = dynamic_cast<StaticGetExpr *>(left))
         {
-            return new StaticSetExpr(statExpr->className, statExpr->memberName, value);
+            return new StaticSetExpr(statExpr->className, statExpr->colonColon, statExpr->memberName, op, value);
         }
         throw std::runtime_error("Invalid assignment target");
     }
