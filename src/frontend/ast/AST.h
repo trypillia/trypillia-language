@@ -740,15 +740,25 @@ class FunctionNode : public StmtNode
 {
   public:
     std::string name;
+    Token keywordFn;
+    Token nameToken;
+    Token leftParen;
     std::vector<Parameter> params;
+    Token rightParen;
+    Token leftBrace;
     std::vector<StmtNode *> body;
+    Token rightBrace;
+    Token semicolon;
+
     AccessModifier accessModifier;
     bool isAbstract;
     bool isStatic;
 
-    FunctionNode(std::string name, std::vector<Parameter> params, std::vector<StmtNode *> body)
-        : name(name), params(params), body(body), accessModifier(AccessModifier::PUBLIC), isAbstract(false),
-          isStatic(false)
+    FunctionNode(std::string name, Token keywordFn, Token nameToken, Token leftParen, std::vector<Parameter> params,
+                 Token rightParen, Token leftBrace, std::vector<StmtNode *> body, Token rightBrace, Token semicolon)
+        : name(name), keywordFn(keywordFn), nameToken(nameToken), leftParen(leftParen), params(params),
+          rightParen(rightParen), leftBrace(leftBrace), body(body), rightBrace(rightBrace), semicolon(semicolon),
+          accessModifier(AccessModifier::PUBLIC), isAbstract(false), isStatic(false)
     {
     }
 
