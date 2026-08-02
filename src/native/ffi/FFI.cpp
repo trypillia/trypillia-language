@@ -335,7 +335,7 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         void *p;
     } ret;
 
-    ffi_call(&cif, fn, &ret, values.data());
+    ffi_call(&cif, reinterpret_cast<void (*)()>(fn), &ret, values.data());
 
     switch (retType)
     {
@@ -354,78 +354,15 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
     }
     return VMValue(nullptr);
 }
-}
-
-ffi_type *ffiRet = &ffi_type_void;
-switch (retType)
-{
-case FFIType::Void:
-    ffiRet = &ffi_type_void;
-    break;
-case FFIType::Int32:
-    ffiRet = &ffi_type_sint32;
-    break;
-case FFIType::Int64:
-    ffiRet = &ffi_type_sint64;
-    break;
-case FFIType::Double:
-    ffiRet = &ffi_type_double;
-    break;
-case FFIType::String:
-    ffiRet = &ffi_type_pointer;
-    break;
-case FFIType::Pointer:
-    ffiRet = &ffi_type_pointer;
-    break;
-}
-
-ffi_cif cif;
-ffi_status status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)argTypes.size(), ffiRet, ffiArgTypes.data());
-if (status != FFI_OK)
-{
-    return makeResultErr(currentVM, "ffi_prep_cif failed");
-}
-
-std::vector<void *> values;
-values.reserve(raw.size());
-for (size_t i = 0; i < raw.size(); i++)
-{
-    values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&raw[i])));
-}
-
-union {
-    int32_t i32;
-    int64_t i64;
-    double d;
-    void *p;
-} ret;
-
-ffi_call(&cif, reinterpret_cast<void (*)()>(fn), &ret, values.data());
-
-switch (retType)
-{
-case FFIType::Void:
-    return VMValue(nullptr);
-case FFIType::Int32:
-    return VMValue((double)ret.i32);
-case FFIType::Int64:
-    return VMValue((double)ret.i64);
-case FFIType::Double:
-    return VMValue(ret.d);
-case FFIType::String:
-    return ret.p ? VMValue(std::string(static_cast<char *>(ret.p))) : VMValue(nullptr);
-case FFIType::Pointer:
-    return wrapPointerResult(ret.p);
-}
-return VMValue(nullptr);
-}
 
 // --------------------------------------------------------------------
 // Shared helpers for the native methods below
 // --------------------------------------------------------------------
 
 // Parses a Trypillia list-of-strings into argTypes. Returns false (and
-// sets err) on any invalid entry.
+// sets err) on any invalid entry. Supports an optional "..." varargs
+// marker: everything before "..." is fixed args, everything after is
+// explicit vararg types.
 static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, std::string &err)
 {
     if (!listVal.isList())
@@ -436,6 +373,7 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
     auto &elements = listVal.asList()->elements;
     out.clear();
     out.reserve(elements.size());
+    bool sawEllipsis = false;
     for (auto &el : elements)
     {
         if (!el.isString())
@@ -446,14 +384,19 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
         std::string typeStr = el.asString()->flatten();
         if (typeStr == "...")
         {
-            out.push_back(FFIType::Void); // marker for varargs separator
+            if (sawEllipsis)
+            {
+                err = "only one \"...\" varargs marker is allowed";
+                return false;
+            }
+            sawEllipsis = true;
+            out.push_back(FFIType::Void); // sentinel for varargs separator
             continue;
         }
         FFIType t;
         if (!parseType(typeStr, t) || t == FFIType::Void)
         {
-            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG +
-                  ", excluding void and ...)";
+            err = "invalid argument type '" + typeStr + "' (expected one of: " + VALID_TYPES_MSG + ", excluding void)";
             return false;
         }
         out.push_back(t);
@@ -466,27 +409,9 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
 static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FFIType> &argTypes, VMValue *args,
                               int startIdx, int provided)
 {
-    size_t fixedCount = 0;
-    bool hasVarargs = false;
-    for (size_t i = 0; i < argTypes.size(); i++)
-    {
-        if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
-        {
-            hasVarargs = true;
-            break;
-        }
-        fixedCount++;
-    }
-
-    if (!hasVarargs && provided != (int)argTypes.size())
+    if (provided != (int)argTypes.size())
     {
         return makeResultErr(currentVM, "expected " + std::to_string(argTypes.size()) + " argument(s) but got " +
-                                            std::to_string(provided));
-    }
-
-    if (hasVarargs && provided < (int)fixedCount)
-    {
-        return makeResultErr(currentVM, "expected at least " + std::to_string(fixedCount) + " argument(s) but got " +
                                             std::to_string(provided));
     }
 
@@ -494,9 +419,10 @@ static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FF
     std::vector<RawSlot> raw(argTypes.size());
     for (size_t i = 0; i < (size_t)provided && i < argTypes.size(); i++)
     {
-        if (hasVarargs && i >= fixedCount)
+        if (argTypes[i] == FFIType::Void)
         {
-            break;
+            return makeResultErr(currentVM,
+                                 "internal error: unexpected varargs sentinel at argument " + std::to_string(i + 1));
         }
         std::string err;
         if (!marshalArg(args[startIdx + (int)i], argTypes[i], stringStorage, raw[i], err))
@@ -510,7 +436,7 @@ static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FF
 }
 
 // --------------------------------------------------------------------
-// FFI.load(path) -> Result<FFILibrary>
+// FFI.open(path) -> Result<FFILibrary>
 // --------------------------------------------------------------------
 
 static VMValue ffiLoad(int argCount, VMValue *args)
