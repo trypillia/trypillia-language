@@ -587,13 +587,20 @@ class ContinueStmt : public StmtNode
 class ForStmt : public StmtNode
 {
   public:
+    Token keywordFor;
+    Token leftParen;
     StmtNode *initializer;
+    Token semicolon1;
     ExprNode *condition;
+    Token semicolon2;
     ExprNode *increment;
+    Token rightParen;
     StmtNode *body;
 
-    ForStmt(StmtNode *initializer, ExprNode *condition, ExprNode *increment, StmtNode *body)
-        : initializer(initializer), condition(condition), increment(increment), body(body)
+    ForStmt(Token keywordFor, Token leftParen, StmtNode *initializer, Token semicolon1, ExprNode *condition,
+            Token semicolon2, ExprNode *increment, Token rightParen, StmtNode *body)
+        : keywordFor(keywordFor), leftParen(leftParen), initializer(initializer), semicolon1(semicolon1),
+          condition(condition), semicolon2(semicolon2), increment(increment), rightParen(rightParen), body(body)
     {
     }
 
