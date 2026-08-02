@@ -128,10 +128,13 @@ class SetExpr : public ExprNode
 {
   public:
     ExprNode *object;
+    Token dot;
     Token name;
+    Token assign;
     ExprNode *value;
 
-    SetExpr(ExprNode *object, Token name, ExprNode *value) : object(object), name(name), value(value)
+    SetExpr(ExprNode *object, Token dot, Token name, Token assign, ExprNode *value)
+        : object(object), dot(dot), name(name), assign(assign), value(value)
     {
     }
 
@@ -857,11 +860,13 @@ class StaticSetExpr : public ExprNode
 {
   public:
     Token className;
+    Token colonColon;
     Token memberName;
+    Token assign;
     ExprNode *value;
 
-    StaticSetExpr(Token className, Token memberName, ExprNode *value)
-        : className(className), memberName(memberName), value(value)
+    StaticSetExpr(Token className, Token colonColon, Token memberName, Token assign, ExprNode *value)
+        : className(className), colonColon(colonColon), memberName(memberName), assign(assign), value(value)
     {
     }
 
