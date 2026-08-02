@@ -256,12 +256,19 @@ static bool marshalArg(const VMValue &val, FFIType type, std::deque<std::string>
 // --------------------------------------------------------------------
 
 static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType> &argTypes,
-                           const std::vector<RawSlot> &raw)
+                           const std::vector<RawSlot> &raw, int provided)
 {
     std::vector<ffi_type *> ffiArgTypes;
+    std::vector<RawSlot> fixedRaw;
     ffiArgTypes.reserve(argTypes.size());
+    fixedRaw.reserve(argTypes.size());
+
     for (size_t i = 0; i < argTypes.size(); i++)
     {
+        if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
+        {
+            break;
+        }
         switch (argTypes[i])
         {
         case FFIType::Int32:
@@ -280,6 +287,7 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         default:
             return makeResultErr(currentVM, "unsupported argument type");
         }
+        fixedRaw.push_back(raw[i]);
     }
 
     ffi_type *ffiRet = &ffi_type_void;
@@ -306,17 +314,18 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
     }
 
     ffi_cif cif;
-    ffi_status status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)argTypes.size(), ffiRet, ffiArgTypes.data());
+    ffi_status status =
+        ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)ffiArgTypes.size(), ffiRet, ffiArgTypes.data());
     if (status != FFI_OK)
     {
         return makeResultErr(currentVM, "ffi_prep_cif failed");
     }
 
     std::vector<void *> values;
-    values.reserve(raw.size());
-    for (size_t i = 0; i < raw.size(); i++)
+    values.reserve(fixedRaw.size());
+    for (size_t i = 0; i < fixedRaw.size(); i++)
     {
-        values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&raw[i])));
+        values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&fixedRaw[i])));
     }
 
     union {
@@ -326,7 +335,7 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         void *p;
     } ret;
 
-    ffi_call(&cif, reinterpret_cast<void (*)()>(fn), &ret, values.data());
+    ffi_call(&cif, fn, &ret, values.data());
 
     switch (retType)
     {
@@ -344,6 +353,71 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         return wrapPointerResult(ret.p);
     }
     return VMValue(nullptr);
+}
+}
+
+ffi_type *ffiRet = &ffi_type_void;
+switch (retType)
+{
+case FFIType::Void:
+    ffiRet = &ffi_type_void;
+    break;
+case FFIType::Int32:
+    ffiRet = &ffi_type_sint32;
+    break;
+case FFIType::Int64:
+    ffiRet = &ffi_type_sint64;
+    break;
+case FFIType::Double:
+    ffiRet = &ffi_type_double;
+    break;
+case FFIType::String:
+    ffiRet = &ffi_type_pointer;
+    break;
+case FFIType::Pointer:
+    ffiRet = &ffi_type_pointer;
+    break;
+}
+
+ffi_cif cif;
+ffi_status status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)argTypes.size(), ffiRet, ffiArgTypes.data());
+if (status != FFI_OK)
+{
+    return makeResultErr(currentVM, "ffi_prep_cif failed");
+}
+
+std::vector<void *> values;
+values.reserve(raw.size());
+for (size_t i = 0; i < raw.size(); i++)
+{
+    values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&raw[i])));
+}
+
+union {
+    int32_t i32;
+    int64_t i64;
+    double d;
+    void *p;
+} ret;
+
+ffi_call(&cif, reinterpret_cast<void (*)()>(fn), &ret, values.data());
+
+switch (retType)
+{
+case FFIType::Void:
+    return VMValue(nullptr);
+case FFIType::Int32:
+    return VMValue((double)ret.i32);
+case FFIType::Int64:
+    return VMValue((double)ret.i64);
+case FFIType::Double:
+    return VMValue(ret.d);
+case FFIType::String:
+    return ret.p ? VMValue(std::string(static_cast<char *>(ret.p))) : VMValue(nullptr);
+case FFIType::Pointer:
+    return wrapPointerResult(ret.p);
+}
+return VMValue(nullptr);
 }
 
 // --------------------------------------------------------------------
@@ -392,16 +466,38 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
 static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FFIType> &argTypes, VMValue *args,
                               int startIdx, int provided)
 {
-    if (provided != (int)argTypes.size())
+    size_t fixedCount = 0;
+    bool hasVarargs = false;
+    for (size_t i = 0; i < argTypes.size(); i++)
+    {
+        if (argTypes[i] == FFIType::Void && i > 0 && argTypes[i - 1] != FFIType::Void)
+        {
+            hasVarargs = true;
+            break;
+        }
+        fixedCount++;
+    }
+
+    if (!hasVarargs && provided != (int)argTypes.size())
     {
         return makeResultErr(currentVM, "expected " + std::to_string(argTypes.size()) + " argument(s) but got " +
                                             std::to_string(provided));
     }
 
+    if (hasVarargs && provided < (int)fixedCount)
+    {
+        return makeResultErr(currentVM, "expected at least " + std::to_string(fixedCount) + " argument(s) but got " +
+                                            std::to_string(provided));
+    }
+
     std::deque<std::string> stringStorage;
     std::vector<RawSlot> raw(argTypes.size());
-    for (size_t i = 0; i < argTypes.size(); i++)
+    for (size_t i = 0; i < (size_t)provided && i < argTypes.size(); i++)
     {
+        if (hasVarargs && i >= fixedCount)
+        {
+            break;
+        }
         std::string err;
         if (!marshalArg(args[startIdx + (int)i], argTypes[i], stringStorage, raw[i], err))
         {
@@ -409,7 +505,7 @@ static VMValue marshalAndCall(void *fnPtr, FFIType retType, const std::vector<FF
         }
     }
 
-    VMValue result = callDynamic(fnPtr, retType, argTypes, raw);
+    VMValue result = callDynamic(fnPtr, retType, argTypes, raw, provided);
     return makeResultOk(currentVM, result);
 }
 
