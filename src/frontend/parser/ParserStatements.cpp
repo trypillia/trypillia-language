@@ -110,19 +110,25 @@ StmtNode *Parser::block()
 
 StmtNode *Parser::ifStatement()
 {
+    Token keywordIf = previousToken;
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
     ExprNode *condition = expression();
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
 
     StmtNode *thenBranch = statement();
     StmtNode *elseBranch = nullptr;
 
+    Token keywordElse;
+    keywordElse.type = TokenType::UNKNOWN;
     if (match(TokenType::ELSE))
     {
+        keywordElse = previousToken;
         elseBranch = statement();
     }
 
-    return new IfStmt(condition, thenBranch, elseBranch);
+    return new IfStmt(keywordIf, leftParen, condition, rightParen, thenBranch, keywordElse, elseBranch);
 }
 
 StmtNode *Parser::whileStatement()
