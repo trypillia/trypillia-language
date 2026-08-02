@@ -441,6 +441,7 @@ ExprNode *Parser::parseList(bool canAssign)
 
 ExprNode *Parser::parseDict(bool canAssign)
 {
+    Token leftBrace = previousToken;
     std::vector<std::pair<ExprNode *, ExprNode *>> elements;
     if (currentToken.type != TokenType::RBRACE)
     {
@@ -452,8 +453,9 @@ ExprNode *Parser::parseDict(bool canAssign)
             elements.push_back({key, value});
         } while (match(TokenType::COMMA));
     }
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
-    return new DictExpr(elements);
+    return new DictExpr(leftBrace, elements, rightBrace);
 }
 
 ExprNode *Parser::parseFn(bool canAssign)
