@@ -921,6 +921,7 @@ void Parser::synchronize()
 
 StmtNode *Parser::parseNamespaceDeclaration()
 {
+    Token keywordNamespace = previousToken;
     Token nameToken = currentToken;
     std::string ns = "";
     do
@@ -938,12 +939,13 @@ StmtNode *Parser::parseNamespaceDeclaration()
         }
     } while (true);
 
+    Token semicolon = currentToken;
     consume(TokenType::SEMICOLON);
     this->currentNamespace = ns;
 
     Token nsToken = nameToken;
     nsToken.lexeme = ns;
-    return new NamespaceStmt(nsToken);
+    return new NamespaceStmt(keywordNamespace, nsToken, semicolon);
 }
 
 StmtNode *Parser::parseUseStatement()
