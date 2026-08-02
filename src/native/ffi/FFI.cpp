@@ -324,7 +324,7 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
         void *p;
     } ret;
 
-    ffi_call(&cif, fn, &ret, values.data());
+    ffi_call(&cif, reinterpret_cast<void (*)()>(fn), &ret, values.data());
 
     switch (retType)
     {
