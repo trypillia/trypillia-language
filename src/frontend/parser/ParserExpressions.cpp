@@ -566,9 +566,11 @@ ExprNode *Parser::parseDot(ExprNode *left, bool canAssign)
 
 ExprNode *Parser::parseIndex(ExprNode *left, bool canAssign)
 {
+    Token leftBracket = previousToken;
     ExprNode *index = expression();
+    Token rightBracket = currentToken;
     consume(TokenType::RBRACKET);
-    return new IndexGetExpr(left, index);
+    return new IndexGetExpr(left, leftBracket, index, rightBracket);
 }
 
 ExprNode *Parser::parseStatic(ExprNode *left, bool canAssign)
@@ -649,7 +651,8 @@ ExprNode *Parser::parseAssignment(ExprNode *left, bool canAssign)
         }
         else if (IndexGetExpr *idxExpr = dynamic_cast<IndexGetExpr *>(left))
         {
-            return new IndexSetExpr(idxExpr->object, idxExpr->index, value);
+            return new IndexSetExpr(idxExpr->object, idxExpr->leftBracket, idxExpr->index, idxExpr->rightBracket, op,
+                                    value);
         }
         else if (StaticGetExpr *statExpr = dynamic_cast<StaticGetExpr *>(left))
         {
