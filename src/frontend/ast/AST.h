@@ -310,8 +310,9 @@ class ExpressionStmt : public StmtNode
 {
   public:
     ExprNode *expression;
+    Token semicolon;
 
-    ExpressionStmt(ExprNode *expression) : expression(expression)
+    ExpressionStmt(ExprNode *expression, Token semicolon) : expression(expression), semicolon(semicolon)
     {
     }
     ~ExpressionStmt()
