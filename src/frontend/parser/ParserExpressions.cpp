@@ -641,7 +641,7 @@ ExprNode *Parser::parseAssignment(ExprNode *left, bool canAssign)
     {
         if (VariableExpr *varExpr = dynamic_cast<VariableExpr *>(left))
         {
-            return new AssignExpr(varExpr->name, value);
+            return new AssignExpr(varExpr->name, op, value);
         }
         else if (GetExpr *getExpr = dynamic_cast<GetExpr *>(left))
         {
