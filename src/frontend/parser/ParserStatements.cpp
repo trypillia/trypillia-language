@@ -312,10 +312,12 @@ StmtNode *Parser::forStatement()
 
         if (match(TokenType::IN))
         {
+            Token keywordIn = previousToken;
             ExprNode *iterable = expression();
+            Token rightParen = currentToken;
             consume(TokenType::RPAREN);
             StmtNode *body = statement();
-            return new ForeachStmt(name, iterable, body);
+            return new ForeachStmt(keywordFor, leftParen, name, keywordIn, iterable, rightParen, body);
         }
 
         // Regular for with var initializer
