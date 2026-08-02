@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+#include "cli/Help.h"
 #include "frontend/ast/ASTOptimizer.h"
 #include "frontend/formatter/FormatterVisitor.h"
 #include "frontend/lexer/Lexer.h"
@@ -141,6 +142,36 @@ int main(int argc, char **argv)
     bool enableCoverage = false;
     std::string inputFile;
     std::string outputFile;
+
+    // Short-circuit --help / --version before any file I/O or argument
+    // parsing so the user gets instant, consistent feedback.
+    {
+        bool wantsHelp = false;
+        bool wantsVersion = false;
+        std::string commandInArgs;
+        for (int i = 1; i < argc; i++)
+        {
+            std::string arg = argv[i];
+            if (arg == "--help" || arg == "-h")
+                wantsHelp = true;
+            else if (arg == "--version" || arg == "-V")
+                wantsVersion = true;
+            else if (arg == "build" || arg == "fmt" || arg == "run")
+                commandInArgs = arg;
+        }
+        if (wantsVersion)
+        {
+            cli::printVersion(argv[0]);
+            return 0;
+        }
+        if (wantsHelp)
+        {
+            if (!commandInArgs.empty() && cli::printCommandHelp(argv[0], commandInArgs))
+                return 0;
+            cli::printGeneralHelp(argv[0]);
+            return 0;
+        }
+    }
 
     int argIdx = 1;
     if (argIdx < argc && std::string(argv[argIdx]) == "--coverage")
