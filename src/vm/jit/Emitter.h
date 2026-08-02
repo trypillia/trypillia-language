@@ -2,6 +2,9 @@
 #include <stddef.h>
 
 #include <cstdint>
+#include <vector>
+
+struct sljit_jump;
 
 typedef double (*JitFunc)(void *, double *, int, double);
 
@@ -86,6 +89,10 @@ class JitEmitter
     virtual void bindLabel(size_t byteCodeIndex) = 0;
     virtual void emitJump(size_t targetByteCodeIndex) = 0;
     virtual void emitJumpIfFalse(int stackOffset, size_t targetByteCodeIndex) = 0;
+
+    // Type guards and deoptimization
+    virtual void emitTypeCheck(int stackOffset, struct sljit_jump **outFailJump) = 0;
+    virtual void emitDeoptPath(std::vector<struct sljit_jump *> &deoptJumps) = 0;
 
     // Finalize and return function pointer
     virtual JitFunc finalize() = 0;

@@ -34,6 +34,8 @@ extern "C" double jit_create_closure_helper(void *vm, double func_val, double *u
 extern "C" double jit_get_upvalue_helper(void *vm_ptr, int slot);
 extern "C" void jit_set_upvalue_helper(void *vm_ptr, int slot, double val);
 extern "C" void jit_close_upvalue_helper(void *vm_ptr, double *addr);
+extern "C" void jit_deopt_helper(void *vm_ptr);
+extern "C" int jit_type_check_helper(void *vm_ptr, double value);
 
 class UniversalEmitter : public JitEmitter
 {
@@ -828,6 +830,35 @@ class UniversalEmitter : public JitEmitter
         {
             unresolvedJumps[targetByteCodeIndex].push_back(jump);
         }
+    }
+
+    void emitTypeCheck(int stackOffset, struct sljit_jump **outFailJump) override
+    {
+        // Load vm_ptr into R0
+        sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
+        // Load value from stack into FR0 (first float arg)
+        sljit_emit_fop1(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0, SLJIT_MEM1(SLJIT_S1), stackOffset * sizeof(double));
+        // Call jit_type_check_helper(vm_ptr, value) -> returns int (1=number, 0=not)
+        sljit_emit_icall(compiler, SLJIT_CALL, SLJIT_ARGS2(W, W, F64), SLJIT_IMM, (sljit_sw)jit_type_check_helper);
+        // Check if return value is 0 (not a number -> fail)
+        *outFailJump = sljit_emit_cmp(compiler, SLJIT_EQUAL, SLJIT_R0, 0, SLJIT_IMM, 0);
+    }
+
+    void emitDeoptPath(std::vector<struct sljit_jump *> &deoptJumps) override
+    {
+        if (deoptJumps.empty())
+            return;
+        struct sljit_label *deoptLabel = sljit_emit_label(compiler);
+        for (auto jump : deoptJumps)
+        {
+            sljit_set_label(jump, deoptLabel);
+        }
+        // Call jit_deopt_helper(vm_ptr)
+        sljit_emit_op1(compiler, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
+        sljit_emit_icall(compiler, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, (sljit_sw)jit_deopt_helper);
+        // Return 0.0 as dummy result
+        sljit_emit_fset64(compiler, SLJIT_FR0, 0.0);
+        sljit_emit_return(compiler, SLJIT_MOV_F64, SLJIT_FR0, 0);
     }
 
     JitFunc finalize() override
