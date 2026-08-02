@@ -693,15 +693,25 @@ class UsingStmt : public StmtNode
 class SwitchStmt : public StmtNode
 {
   public:
+    Token keywordSwitch;
+    Token leftParen;
     ExprNode *expression;
+    Token rightParen;
+    Token leftBrace;
     struct Case
     {
+        Token keywordCaseOrDefault;
         ExprNode *value; // nullptr for default
+        Token colon;
         std::vector<StmtNode *> body;
     };
     std::vector<Case> cases;
+    Token rightBrace;
 
-    SwitchStmt(ExprNode *expression, std::vector<Case> cases) : expression(expression), cases(std::move(cases))
+    SwitchStmt(Token keywordSwitch, Token leftParen, ExprNode *expression, Token rightParen, Token leftBrace,
+               std::vector<Case> cases, Token rightBrace)
+        : keywordSwitch(keywordSwitch), leftParen(leftParen), expression(expression), rightParen(rightParen),
+          leftBrace(leftBrace), cases(std::move(cases)), rightBrace(rightBrace)
     {
     }
 
