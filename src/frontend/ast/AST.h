@@ -444,12 +444,15 @@ class IndexSetExpr : public ExprNode
 class VarStmt : public StmtNode
 {
   public:
+    Token keyword;
     Token name;
+    Token assign;
     ExprNode *initializer;
+    Token semicolon;
     bool isConst;
 
-    VarStmt(Token name, ExprNode *initializer, bool isConst = false)
-        : name(name), initializer(initializer), isConst(isConst)
+    VarStmt(Token keyword, Token name, Token assign, ExprNode *initializer, Token semicolon, bool isConst = false)
+        : keyword(keyword), name(name), assign(assign), initializer(initializer), semicolon(semicolon), isConst(isConst)
     {
     }
 
