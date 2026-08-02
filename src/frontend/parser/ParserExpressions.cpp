@@ -301,21 +301,29 @@ ExprNode *Parser::parseIdentifier(bool canAssign)
     // Check for arrow lambda: ident =>
     if (currentToken.type == TokenType::ARROW)
     {
+        Token arrow = currentToken;
         advance(); // consume =>
         std::vector<Parameter> parameters;
         parameters.push_back({name.lexeme, nullptr});
 
         std::vector<StmtNode *> body;
+        bool isExpressionBody = false;
+        Token leftBrace;
+        Token rightBrace;
+
         if (match(TokenType::LBRACE))
         {
+            leftBrace = previousToken;
             while (currentToken.type != TokenType::RBRACE && currentToken.type != TokenType::END_OF_FILE)
             {
                 body.push_back(dynamic_cast<StmtNode *>(declaration()));
             }
+            rightBrace = currentToken;
             consume(TokenType::RBRACE);
         }
         else
         {
+            isExpressionBody = true;
             ExprNode *expr = expression();
             Token retToken;
             retToken.type = TokenType::RETURN;
@@ -323,7 +331,11 @@ ExprNode *Parser::parseIdentifier(bool canAssign)
             retToken.line = currentToken.line;
             body.push_back(new ReturnStmt(retToken, expr));
         }
-        return new LambdaExpr(parameters, body);
+
+        Token dummyParen;
+        dummyParen.type = TokenType::UNKNOWN;
+
+        return new LambdaExpr(dummyParen, parameters, dummyParen, arrow, isExpressionBody, leftBrace, body, rightBrace);
     }
 
     return new VariableExpr(name);
@@ -393,20 +405,29 @@ ExprNode *Parser::parseGrouping(bool canAssign)
                 parameters.push_back({param.lexeme, defVal});
             } while (match(TokenType::COMMA));
         }
+        Token rightParen = currentToken;
         consume(TokenType::RPAREN);
+        Token arrow = currentToken;
         consume(TokenType::ARROW);
 
         std::vector<StmtNode *> body;
+        bool isExpressionBody = false;
+        Token leftBrace;
+        Token rightBrace;
+
         if (match(TokenType::LBRACE))
         {
+            leftBrace = previousToken;
             while (currentToken.type != TokenType::RBRACE && currentToken.type != TokenType::END_OF_FILE)
             {
                 body.push_back(dynamic_cast<StmtNode *>(declaration()));
             }
+            rightBrace = currentToken;
             consume(TokenType::RBRACE);
         }
         else
         {
+            isExpressionBody = true;
             ExprNode *expr = expression();
             Token retToken;
             retToken.type = TokenType::RETURN;
@@ -414,7 +435,7 @@ ExprNode *Parser::parseGrouping(bool canAssign)
             retToken.line = currentToken.line;
             body.push_back(new ReturnStmt(retToken, expr));
         }
-        return new LambdaExpr(parameters, body);
+        return new LambdaExpr(leftParen, parameters, rightParen, arrow, isExpressionBody, leftBrace, body, rightBrace);
     }
 
     ExprNode *expr = expression();
@@ -460,6 +481,7 @@ ExprNode *Parser::parseDict(bool canAssign)
 
 ExprNode *Parser::parseFn(bool canAssign)
 {
+    Token leftParen = currentToken;
     consume(TokenType::LPAREN);
     std::vector<Parameter> parameters;
     if (currentToken.type != TokenType::RPAREN)
@@ -476,7 +498,9 @@ ExprNode *Parser::parseFn(bool canAssign)
             parameters.push_back({param.lexeme, defVal});
         } while (match(TokenType::COMMA));
     }
+    Token rightParen = currentToken;
     consume(TokenType::RPAREN);
+    Token leftBrace = currentToken;
     consume(TokenType::LBRACE);
 
     std::vector<StmtNode *> body;
@@ -484,8 +508,13 @@ ExprNode *Parser::parseFn(bool canAssign)
     {
         body.push_back(dynamic_cast<StmtNode *>(declaration()));
     }
+    Token rightBrace = currentToken;
     consume(TokenType::RBRACE);
-    return new LambdaExpr(parameters, body);
+
+    Token dummyArrow;
+    dummyArrow.type = TokenType::UNKNOWN;
+
+    return new LambdaExpr(leftParen, parameters, rightParen, dummyArrow, false, leftBrace, body, rightBrace);
 }
 
 ExprNode *Parser::parseUnary(bool canAssign)
