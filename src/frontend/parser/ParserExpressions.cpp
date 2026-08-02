@@ -329,7 +329,9 @@ ExprNode *Parser::parseIdentifier(bool canAssign)
             retToken.type = TokenType::RETURN;
             retToken.lexeme = "return";
             retToken.line = currentToken.line;
-            body.push_back(new ReturnStmt(retToken, expr));
+            Token dummySemicolon;
+            dummySemicolon.type = TokenType::UNKNOWN;
+            body.push_back(new ReturnStmt(retToken, expr, dummySemicolon));
         }
 
         Token dummyParen;
@@ -433,7 +435,9 @@ ExprNode *Parser::parseGrouping(bool canAssign)
             retToken.type = TokenType::RETURN;
             retToken.lexeme = "return";
             retToken.line = currentToken.line;
-            body.push_back(new ReturnStmt(retToken, expr));
+            Token dummySemicolon;
+            dummySemicolon.type = TokenType::UNKNOWN;
+            body.push_back(new ReturnStmt(retToken, expr, dummySemicolon));
         }
         return new LambdaExpr(leftParen, parameters, rightParen, arrow, isExpressionBody, leftBrace, body, rightBrace);
     }
