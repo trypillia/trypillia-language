@@ -5,6 +5,23 @@
 #include "../core/VM.h"
 #include "../memory/ObjectRuntime.h"
 
+extern "C" void jit_deopt_helper(void *vm_ptr)
+{
+    VM *vm = static_cast<VM *>(vm_ptr);
+    vm->jitDeoptNeeded = true;
+}
+
+extern "C" int jit_type_check_helper(void *vm_ptr, double value)
+{
+    VMValue val;
+    memcpy((void *)&val, &value, sizeof(double));
+    if (val.isNumber())
+        return 1;
+    VM *vm = static_cast<VM *>(vm_ptr);
+    vm->jitDeoptNeeded = true;
+    return 0;
+}
+
 extern "C" double jit_mod_helper(double a, double b)
 {
     return std::fmod(a, b);

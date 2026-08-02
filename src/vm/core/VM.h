@@ -69,6 +69,7 @@ class VM
     ObjClosure *jitClosure = nullptr;
     JITCompiler jit;
     std::unordered_map<void *, JitFunc> compiledFuncs;
+    bool jitDeoptNeeded = false;
 
     bool suppressRuntimeErrors = false;
     bool collectCoverage = false;
