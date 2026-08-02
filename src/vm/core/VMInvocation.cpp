@@ -285,13 +285,22 @@ bool VM::executeCall(uint8_t argCount)
             if (allNumbers)
             {
                 jitClosure = closure;
+                jitDeoptNeeded = false;
                 double result = nativeJitFunc(this, jitArgs.data(), argCount, argCount > 0 ? jitArgs[1] : 0.0);
                 jitClosure = nullptr;
-                stackTop -= argCount + 1;
-                push(result);
-                return true; // Skip standard frame push!
+                if (jitDeoptNeeded)
+                {
+                    jitDeoptNeeded = false;
+                    // Fall through to interpreter
+                }
+                else
+                {
+                    stackTop -= argCount + 1;
+                    push(result);
+                    return true; // Skip standard frame push!
+                }
             }
-            // Fall through to interpreter if not all numbers
+            // Fall through to interpreter if not all numbers or deopt triggered
         }
         CallFrame newFrame;
         newFrame.closure = closure;
