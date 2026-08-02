@@ -425,6 +425,7 @@ ExprNode *Parser::parseGrouping(bool canAssign)
 
 ExprNode *Parser::parseList(bool canAssign)
 {
+    Token leftBracket = previousToken;
     std::vector<ExprNode *> elements;
     if (currentToken.type != TokenType::RBRACKET)
     {
@@ -433,8 +434,9 @@ ExprNode *Parser::parseList(bool canAssign)
             elements.push_back(expression());
         } while (match(TokenType::COMMA));
     }
+    Token rightBracket = currentToken;
     consume(TokenType::RBRACKET);
-    return new ListExpr(elements);
+    return new ListExpr(leftBracket, elements, rightBracket);
 }
 
 ExprNode *Parser::parseDict(bool canAssign)
