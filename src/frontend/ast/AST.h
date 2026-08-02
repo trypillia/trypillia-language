@@ -320,9 +320,12 @@ class ExpressionStmt : public StmtNode
 class ListExpr : public ExprNode
 {
   public:
+    Token leftBracket;
     std::vector<ExprNode *> elements;
+    Token rightBracket;
 
-    ListExpr(std::vector<ExprNode *> elements) : elements(elements)
+    ListExpr(Token leftBracket, std::vector<ExprNode *> elements, Token rightBracket)
+        : leftBracket(leftBracket), elements(elements), rightBracket(rightBracket)
     {
     }
 
