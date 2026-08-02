@@ -8,23 +8,14 @@
 //   let sqrtFn = lib.define("sqrt", "double", ["double"]).value;
 //   print(sqrtFn.call(2.0).value); // 1.4142135623730951
 //
-// Design notes / limitations (deliberately kept simple & honest):
+// Design notes / limitations:
 //  - Supported types: "void" (return only), "int32", "int64", "double",
 //    "string" (const char*, copied in/out), "pointer" (opaque void*).
 //  - No struct-by-value support, no varargs C functions (e.g. printf),
 //    no callbacks (passing a Trypillia function as a C function pointer).
-//    These would each be substantial additional pieces of work; see the
-//    accompanying notes for how they could be layered on top of this.
-//  - Up to FFI_MAX_ARGS (6) arguments per call.
-//  - Calling convention support: this generates the correct System V
-//    AMD64 / Win64 call for the requested signature at compile time via
-//    templates (one instantiation per concrete type combination), the
-//    same way a hand-written C wrapper would -- there is no libffi
-//    dependency. It relies on the fact that "int32"/"int64"/"string"/
-//    "pointer" all occupy a single general-purpose register (or memory
-//    slot on Win64) in these ABIs, so they can share one C++ type
-//    (int64_t) for argument *passing* while still using the precise
-//    type for the *return* value (where the width does matter).
+//  - Calling convention is delegated to libffi, which supports System V
+//    AMD64, Win64, ARM64, and more.
+//  - Argument count is no longer limited to 6.
 
 #include "FFI.h"
 
@@ -32,10 +23,11 @@
 #include <cstring>
 #include <deque>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #include "../StdLib.h"
+
+#include <ffi.h>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -47,8 +39,6 @@ namespace StdLib
 {
 namespace FFIModule
 {
-
-static constexpr size_t FFI_MAX_ARGS = 6;
 
 enum class FFIType
 {
@@ -260,101 +250,96 @@ static bool marshalArg(const VMValue &val, FFIType type, std::deque<std::string>
 }
 
 // --------------------------------------------------------------------
-// Return-value wrapping (Ret is the precise native return type)
+// libffi-based native call
 // --------------------------------------------------------------------
-
-template <typename Ret> static VMValue wrapReturn(Ret r);
-
-template <> VMValue wrapReturn<int32_t>(int32_t r)
-{
-    return VMValue((double)r);
-}
-template <> VMValue wrapReturn<int64_t>(int64_t r)
-{
-    return VMValue((double)r);
-}
-template <> VMValue wrapReturn<double>(double r)
-{
-    return VMValue(r);
-}
-template <> VMValue wrapReturn<char *>(char *r)
-{
-    return r ? VMValue(std::string(r)) : VMValue(nullptr);
-}
-template <> VMValue wrapReturn<void *>(void *r)
-{
-    return wrapPointerResult(r);
-}
-
-// --------------------------------------------------------------------
-// The actual native call, built as a recursive template so that each
-// concrete (return type, argument type list) combination compiles down
-// to a single direct call through a correctly-typed function pointer --
-// i.e. exactly what a hand-written C shim for that signature would do.
-// --------------------------------------------------------------------
-
-template <typename Ret, typename... Collected> static VMValue invokeFixed(void *fn, Collected... collected)
-{
-    using FnT = Ret (*)(Collected...);
-    FnT typed = reinterpret_cast<FnT>(fn);
-    if constexpr (std::is_void_v<Ret>)
-    {
-        typed(collected...);
-        return VMValue(nullptr);
-    }
-    else
-    {
-        return wrapReturn<Ret>(typed(collected...));
-    }
-}
-
-template <typename Ret, typename... Collected>
-static VMValue dispatchArgs(void *fn, const std::vector<FFIType> &types, size_t idx, const std::vector<RawSlot> &raw,
-                            Collected... collected)
-{
-    if (idx == types.size())
-        return invokeFixed<Ret>(fn, collected...);
-
-    if constexpr (sizeof...(Collected) >= FFI_MAX_ARGS)
-    {
-        // Unreachable: callers validate types.size() <= FFI_MAX_ARGS
-        // before ever calling into this dispatcher.
-        (void)fn;
-        (void)raw;
-        return VMValue(nullptr);
-    }
-    else
-    {
-        if (types[idx] == FFIType::Double)
-            return dispatchArgs<Ret>(fn, types, idx + 1, raw, collected..., raw[idx].d);
-        else
-            return dispatchArgs<Ret>(fn, types, idx + 1, raw, collected..., raw[idx].i);
-    }
-}
-
-template <typename Ret>
-static VMValue dispatchReturn(void *fn, const std::vector<FFIType> &types, const std::vector<RawSlot> &raw)
-{
-    return dispatchArgs<Ret>(fn, types, 0, raw);
-}
 
 static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType> &argTypes,
                            const std::vector<RawSlot> &raw)
 {
+    std::vector<ffi_type *> ffiArgTypes;
+    ffiArgTypes.reserve(argTypes.size());
+    for (size_t i = 0; i < argTypes.size(); i++)
+    {
+        switch (argTypes[i])
+        {
+        case FFIType::Int32:
+            ffiArgTypes.push_back(&ffi_type_sint32);
+            break;
+        case FFIType::Int64:
+            ffiArgTypes.push_back(&ffi_type_sint64);
+            break;
+        case FFIType::Double:
+            ffiArgTypes.push_back(&ffi_type_double);
+            break;
+        case FFIType::String:
+        case FFIType::Pointer:
+            ffiArgTypes.push_back(&ffi_type_pointer);
+            break;
+        default:
+            return makeResultErr(currentVM, "unsupported argument type");
+        }
+    }
+
+    ffi_type *ffiRet = &ffi_type_void;
     switch (retType)
     {
     case FFIType::Void:
-        return dispatchReturn<void>(fn, argTypes, raw);
+        ffiRet = &ffi_type_void;
+        break;
     case FFIType::Int32:
-        return dispatchReturn<int32_t>(fn, argTypes, raw);
+        ffiRet = &ffi_type_sint32;
+        break;
     case FFIType::Int64:
-        return dispatchReturn<int64_t>(fn, argTypes, raw);
+        ffiRet = &ffi_type_sint64;
+        break;
     case FFIType::Double:
-        return dispatchReturn<double>(fn, argTypes, raw);
+        ffiRet = &ffi_type_double;
+        break;
     case FFIType::String:
-        return dispatchReturn<char *>(fn, argTypes, raw);
+        ffiRet = &ffi_type_pointer;
+        break;
     case FFIType::Pointer:
-        return dispatchReturn<void *>(fn, argTypes, raw);
+        ffiRet = &ffi_type_pointer;
+        break;
+    }
+
+    ffi_cif cif;
+    ffi_status status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned int)argTypes.size(), ffiRet, ffiArgTypes.data());
+    if (status != FFI_OK)
+    {
+        return makeResultErr(currentVM, "ffi_prep_cif failed");
+    }
+
+    std::vector<void *> values;
+    values.reserve(raw.size());
+    for (size_t i = 0; i < raw.size(); i++)
+    {
+        values.push_back(const_cast<void *>(reinterpret_cast<const void *>(&raw[i])));
+    }
+
+    union {
+        int32_t i32;
+        int64_t i64;
+        double d;
+        void *p;
+    } ret;
+
+    ffi_call(&cif, fn, &ret, values.data());
+
+    switch (retType)
+    {
+    case FFIType::Void:
+        return VMValue(nullptr);
+    case FFIType::Int32:
+        return VMValue((double)ret.i32);
+    case FFIType::Int64:
+        return VMValue((double)ret.i64);
+    case FFIType::Double:
+        return VMValue(ret.d);
+    case FFIType::String:
+        return ret.p ? VMValue(std::string(static_cast<char *>(ret.p))) : VMValue(nullptr);
+    case FFIType::Pointer:
+        return wrapPointerResult(ret.p);
     }
     return VMValue(nullptr);
 }
@@ -364,7 +349,7 @@ static VMValue callDynamic(void *fn, FFIType retType, const std::vector<FFIType>
 // --------------------------------------------------------------------
 
 // Parses a Trypillia list-of-strings into argTypes. Returns false (and
-// sets err) on any invalid entry or if the list is too long.
+// sets err) on any invalid entry.
 static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, std::string &err)
 {
     if (!listVal.isList())
@@ -373,11 +358,6 @@ static bool parseArgTypeList(const VMValue &listVal, std::vector<FFIType> &out, 
         return false;
     }
     auto &elements = listVal.asList()->elements;
-    if (elements.size() > FFI_MAX_ARGS)
-    {
-        err = "too many arguments (max " + std::to_string(FFI_MAX_ARGS) + ")";
-        return false;
-    }
     out.clear();
     out.reserve(elements.size());
     for (auto &el : elements)
