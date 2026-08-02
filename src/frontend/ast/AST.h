@@ -493,12 +493,18 @@ class BlockStmt : public StmtNode
 class IfStmt : public StmtNode
 {
   public:
+    Token keywordIf;
+    Token leftParen;
     ExprNode *condition;
+    Token rightParen;
     StmtNode *thenBranch;
+    Token keywordElse;
     StmtNode *elseBranch;
 
-    IfStmt(ExprNode *condition, StmtNode *thenBranch, StmtNode *elseBranch)
-        : condition(condition), thenBranch(thenBranch), elseBranch(elseBranch)
+    IfStmt(Token keywordIf, Token leftParen, ExprNode *condition, Token rightParen, StmtNode *thenBranch,
+           Token keywordElse, StmtNode *elseBranch)
+        : keywordIf(keywordIf), leftParen(leftParen), condition(condition), rightParen(rightParen),
+          thenBranch(thenBranch), keywordElse(keywordElse), elseBranch(elseBranch)
     {
     }
 
