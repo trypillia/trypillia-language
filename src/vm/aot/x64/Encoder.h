@@ -273,6 +273,10 @@ class Encoder
     {
         return code_;
     }
+    std::vector<uint8_t> &code()
+    {
+        return code_;
+    }
     const std::vector<Reloc> &relocs() const
     {
         return relocs_;
