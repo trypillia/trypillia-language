@@ -53,8 +53,12 @@ bool writeEntryTrampolineC(const std::string &cPath, const std::string &entrySym
     f << "#include <stdint.h>\n";
     f << "extern void trypillia_aot_set_entry_fn(void *fn);\n";
     f << "extern double " << entrySymbol << "(void *vm, double *args, int argc, double n);\n";
+    f << "extern int trypillia_aot_main(int argc, char **argv);\n";
     f << "__attribute__((constructor)) static void trypillia_aot_install(void) {\n";
     f << "    trypillia_aot_set_entry_fn((void *)" << entrySymbol << ");\n";
+    f << "}\n";
+    f << "int main(int argc, char **argv) {\n";
+    f << "    return trypillia_aot_main(argc, argv);\n";
     f << "}\n";
     return true;
 }
