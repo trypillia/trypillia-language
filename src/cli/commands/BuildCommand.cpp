@@ -1,5 +1,6 @@
 #include "Command.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -10,12 +11,36 @@
 #include "../../frontend/lexer/Lexer.h"
 #include "../../frontend/parser/Parser.h"
 #include "../../frontend/semantic/SemanticAnalyzer.h"
+#include "../../vm/aot/AOTModule.h"
 #include "../../vm/compiler/BytecodeCompiler.h"
 #include "../../vm/core/VM.h"
 #include "../../vm/serializer/Serializer.h"
 
 namespace cli
 {
+
+static std::string findRuntimeLibrary(const std::string &exePath)
+{
+    // Search order:
+    //   1) $TRYPILLIA_RT_PATH environment variable (full path to libtrypillia_rt.a)
+    //   2) <exeDir>/libtrypillia_rt.a  (sibling of the trypillia binary)
+    //   3) <exeDir>/../lib/libtrypillia_rt.a
+    if (const char *env = std::getenv("TRYPILLIA_RT_PATH"))
+    {
+        if (std::filesystem::exists(env))
+            return env;
+    }
+    namespace fs = std::filesystem;
+    fs::path exeDir = fs::path(exePath).parent_path();
+    fs::path p1 = exeDir / "libtrypillia_rt.a";
+    if (fs::exists(p1))
+        return p1.string();
+    fs::path p2 = exeDir / ".." / "lib" / "libtrypillia_rt.a";
+    if (fs::exists(p2))
+        return fs::weakly_canonical(p2).string();
+    return "";
+}
+
 int buildCommand(const ParsedArgs &args, const std::string &programName, const std::string &exePath)
 {
     (void)programName;
@@ -23,12 +48,28 @@ int buildCommand(const ParsedArgs &args, const std::string &programName, const s
     const std::string &inputFile = args.file;
     if (inputFile.empty())
     {
-        std::cerr << "Usage: " << programName << " build <file.try> [output]" << std::endl;
+        std::cerr << "Usage: " << programName << " build [--aot] <file.try> [output]" << std::endl;
         std::cerr << "Run `" << programName << " build --help` for more information." << std::endl;
         return 1;
     }
 
-    std::string outputFile = args.rest.empty() ? "app" : args.rest[0];
+    bool aotMode = false;
+    for (const auto &flag : args.rest)
+    {
+        if (flag == "--aot")
+        {
+            aotMode = true;
+            break;
+        }
+    }
+
+    std::vector<std::string> positional;
+    for (const auto &r : args.rest)
+    {
+        if (r != "--aot")
+            positional.push_back(r);
+    }
+    std::string outputFile = positional.empty() ? (aotMode ? "app" : "app") : positional[0];
 
     if (std::filesystem::is_directory(inputFile))
     {
@@ -63,7 +104,36 @@ int buildCommand(const ParsedArgs &args, const std::string &programName, const s
         delete globals;
     }
 
-    if (function)
+    if (!function)
+    {
+        std::cerr << "Error: failed to compile " << inputFile << std::endl;
+        return 1;
+    }
+
+    if (aotMode)
+    {
+        std::string rtPath = findRuntimeLibrary(exePath);
+        if (rtPath.empty())
+        {
+            std::cerr << "Error: libtrypillia_rt.a not found. Set $TRYPILLIA_RT_PATH or place it next to "
+                         "the trypillia binary."
+                      << std::endl;
+            return 1;
+        }
+        trypillia::aot::AOTModule::Options opt;
+        opt.rtLibPath = rtPath;
+        std::string err;
+        if (!trypillia::aot::AOTModule::compileToExecutable(function, outputFile, opt, err))
+        {
+            std::cerr << "AOT compilation failed: " << err << std::endl;
+            std::cerr << "Hint: --aot (Phase 1) supports purely numeric programs. For full language "
+                         "support, omit --aot to get the legacy self-contained bytecode build."
+                      << std::endl;
+            return 1;
+        }
+        std::cout << "Successfully built AOT executable: " << outputFile << std::endl;
+    }
+    else
     {
         if (Serializer::buildStandalone(function, exePath, outputFile))
         {
