@@ -79,7 +79,24 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
     }
     auto *c = function->chunk;
 
-    out.name = std::string("trypillia_aot_") + (function->enclosingClassName.empty() ? std::string("") : function->enclosingClassName + "_") + function->name;
+    std::string sanitizeName(const std::string &n)
+    {
+        std::string r;
+        for (char c : n)
+        {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')
+                r += c;
+            else
+                r += '_';
+        }
+        if (!r.empty() && (r[0] >= '0' && r[0] <= '9'))
+            r = "_" + r;
+        if (r.empty())
+            r = "fn";
+        return r;
+    }
+
+    out.name = std::string("trypillia_aot_") + sanitizeName((function->enclosingClassName.empty() ? std::string("") : function->enclosingClassName + "_") + function->name);
     if (out.name.empty())
     {
         out.name = "trypillia_aot_main";
