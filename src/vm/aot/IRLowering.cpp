@@ -1,6 +1,7 @@
 #include "IRLowering.h"
 
 #include <cstring>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
