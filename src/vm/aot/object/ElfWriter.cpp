@@ -434,7 +434,7 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
         // Find it: the symbol with name == func.entrySymbol.
         for (auto &s : symbols)
         {
-            std::string nm = strtab.bytes.data() + s.st_name;
+            std::string nm = reinterpret_cast<char*>(strtab.bytes.data()) + s.st_name;
             if (nm == func.entrySymbol)
             {
                 s.st_shndx = static_cast<uint16_t>(idx_text);
