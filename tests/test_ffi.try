@@ -91,4 +91,27 @@ describe("FFI", fn() {
             assertEq(r.isOk, false);
         }
     });
+
+    it("supports varargs via \"...\" type marker", fn() {
+        let candidates = ["libc.so.6", "msvcrt.dll", "libSystem.dylib"];
+        let lib = nil;
+        let i = 0;
+        while (i < candidates.length() && lib == nil) {
+            let r = FFI.open(candidates[i]);
+            if (r.isOk) {
+                lib = r.value;
+            }
+            i = i + 1;
+        }
+
+        if (lib != nil) {
+            let r = lib.define("printf", "int32", ["string", "...", "int32"]);
+            assertEq(r.isOk, true);
+            if (r.isOk) {
+                let res = r.value.call("hello %d", 42);
+                assertEq(res.isOk, true);
+            }
+            lib.close();
+        }
+    });
 });
