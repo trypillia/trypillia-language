@@ -17,7 +17,7 @@ bool Linker::link(const std::string &outPath, const std::vector<std::string> &ob
     // references the entry symbol directly. So the linker will
     // resolve it as part of the regular symbol resolution.
     std::ostringstream cmd;
-    cmd << "cc";
+    cmd << "c++";
     for (const auto &obj : objectFiles)
     {
         cmd << " '" << obj << "'";
