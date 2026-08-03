@@ -571,15 +571,7 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
     shdr.sh_offset = off_symtab;
     shdr.sh_size = symtabData.size();
     shdr.sh_link = idx_strtab;
-    shdr.sh_info = 1 + 2; // index of first non-local symbol (the
-                          // 2 section symbols plus the null). For
-                          // simplicity, set to count of locals; we
-                          // have 3 locals (null, .text section,
-                          // .rodata section). Actually the null is
-                          // at idx 0, .text section is at 1,
-                          // .rodata section is at 2, the function
-                          // global is at 3. So first non-local = 3.
-    shdr.sh_info = 3;
+    shdr.sh_info = 4; // index of first global symbol (after null, FILE, .text, .rodata)
     shdr.sh_addralign = 8;
     shdr.sh_entsize = sizeof(Elf64Sym);
     writeShdr(out, shdr);
