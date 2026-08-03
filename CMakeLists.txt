@@ -6,9 +6,50 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(include)
 
+# =============================================================
+# Source layout
+#
+# trypillia_core   — common VM, frontend, JIT runtime, serializer.
+#                    Built as a STATIC lib so it can be linked into
+#                    both the trypillia CLI binary and the
+#                    trypillia-test runner. Does NOT include the
+#                    AOT encoder, ELF writer, AOT main, or the
+#                    Bridge.cpp helpers — those go in trypillia_rt.
+#
+# trypillia_rt     — minimal runtime for AOT-produced binaries:
+#                    jit_*_helper (Bridge.cpp), AOTMain.cpp, the
+#                    GC stub used by those helpers. Linked into
+#                    the trypillia CLI (so the JIT path still
+#                    resolves the symbols) and into AOT binaries
+#                    (so they don't need to drag the rest of the
+#                    VM in).
+#
+# trypillia_aot    — AOT-only code: IR, IRLowering, x64 encoder,
+#                    object/ELF writer, Linker wrapper. Not linked
+#                    into the CLI binary, but the CLI uses it
+#                    implicitly when build --aot is invoked (the
+#                    CLI binary is built with --whole-archive to
+#                    pull in AOTMain's constructor and any other
+#                    symbols needed at startup).
+# =============================================================
+
+# --- trypillia_core ---
+
 file(GLOB_RECURSE CORE_SOURCES "src/*.cpp")
 list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/test_runner_main.cpp")
+# Bridge.cpp moves to trypillia_rt (so AOT binaries don't need the
+# rest of the VM).
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/jit/Bridge.cpp")
+# AOT sources move to trypillia_aot.
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/AOTMain.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/AOTModule.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/IRLowering.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/Linker.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/AOTTrampoline.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/x64/Encoder.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/x64/X64ObjectBackend.cpp")
+list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/aot/object/ElfWriter.cpp")
 
 include(FetchContent)
 FetchContent_Declare(
@@ -48,11 +89,52 @@ pkg_check_modules(FFI REQUIRED libffi)
 target_link_libraries(trypillia_core PUBLIC ${CMAKE_DL_LIBS} ${FFI_LIBRARIES})
 target_include_directories(trypillia_core PUBLIC ${FFI_INCLUDE_DIRS})
 
+# --- trypillia_rt (Bridge.cpp + AOTMain.cpp) ---
+
+add_library(trypillia_rt STATIC
+    src/vm/jit/Bridge.cpp
+    src/vm/aot/AOTMain.cpp
+)
+target_include_directories(trypillia_rt PUBLIC include)
+
+# The runtime depends on the core VM (for `VM` in AOTMain and the
+# helpers). We link PUBLIC so that anything linking trypillia_rt
+# also gets the transitive dependency chain.
+target_link_libraries(trypillia_rt PUBLIC trypillia_core)
+
+# --- trypillia_aot (AOT-only code) ---
+
+add_library(trypillia_aot STATIC
+    src/vm/aot/AOTModule.cpp
+    src/vm/aot/IRLowering.cpp
+    src/vm/aot/Linker.cpp
+    src/vm/aot/AOTTrampoline.cpp
+    src/vm/aot/x64/Encoder.cpp
+    src/vm/aot/x64/X64ObjectBackend.cpp
+    src/vm/aot/object/ElfWriter.cpp
+)
+target_include_directories(trypillia_aot PUBLIC include)
+target_link_libraries(trypillia_aot PUBLIC trypillia_rt trypillia_core)
+
+# --- CLI binaries ---
+
 add_executable(trypillia src/main.cpp)
-target_link_libraries(trypillia trypillia_core)
+# --whole-archive is needed so AOTMain's symbols (used only by
+# external linkers, not by the CLI itself) are present in the
+# final binary, and so the AOTModule / Linker / AOTTrampoline
+# symbols are pulled in for `build --aot` to use.
+target_link_libraries(trypillia
+    -Wl,--whole-archive trypillia_aot -Wl,--no-whole-archive
+    trypillia_core
+    trypillia_rt
+)
 
 add_executable(trypillia-test src/test_runner_main.cpp)
-target_link_libraries(trypillia-test trypillia_core)
+target_link_libraries(trypillia-test
+    -Wl,--whole-archive trypillia_aot -Wl,--no-whole-archive
+    trypillia_core
+    trypillia_rt
+)
 
 # Explicitly link atomic for 32-bit ARM (like Android/Termux armv7)
 include(CheckLibraryExists)
@@ -77,4 +159,3 @@ if(MSVC)
     target_compile_options(trypillia_core PRIVATE /wd4244 /wd4267)
     target_compile_definitions(trypillia_core PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
-
