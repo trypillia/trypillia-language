@@ -35,7 +35,7 @@ bool Linker::link(const std::string &outPath, const std::vector<std::string> &ob
     {
         cmd << " -L'" << rtDir << "'";
     }
-    cmd << " -ltrypillia_rt -ltrypillia_core -lm -lpthread";
+    cmd << " -ltrypillia_core -ltrypillia_rt -lm -lpthread";
     for (const auto &a : ccArgs)
     {
         cmd << " " << a;
