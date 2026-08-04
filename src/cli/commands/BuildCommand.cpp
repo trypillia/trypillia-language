@@ -53,21 +53,12 @@ int buildCommand(const ParsedArgs &args, const std::string &programName, const s
         return 1;
     }
 
-    bool aotMode = false;
-    for (const auto &flag : args.rest)
-    {
-        if (flag == "--aot")
-        {
-            aotMode = true;
-            break;
-        }
-    }
+    bool aotMode = args.aot;
 
     std::vector<std::string> positional;
     for (const auto &r : args.rest)
     {
-        if (r != "--aot")
-            positional.push_back(r);
+        positional.push_back(r);
     }
     std::string outputFile = positional.empty() ? (aotMode ? "app" : "app") : positional[0];
 

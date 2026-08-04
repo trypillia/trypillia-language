@@ -61,6 +61,10 @@ std::optional<ParsedArgs> parseArgs(int argc, char **argv)
             {
                 out.coverage = true;
             }
+            else if (arg == "--aot")
+            {
+                out.aot = true;
+            }
             else if (isCommandKeyword(arg))
             {
                 if (st == State::ScanFlags)

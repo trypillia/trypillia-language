@@ -20,6 +20,7 @@ struct ParsedArgs
     bool showHelp = false;
     bool showVersion = false;
     bool coverage = false;
+    bool aot = false;
 
     std::optional<std::string> helpForCommand;
 
