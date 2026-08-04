@@ -287,7 +287,7 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
     uint32_t textSectionSymIdx = static_cast<uint32_t>(symbols.size());
     {
         Elf64Sym s{};
-        s.st_name = shstrtab.intern(".text");
+        s.st_name = strtab.intern(".text");
         s.st_info = stInfo(STB_LOCAL, STT_SECTION);
         s.st_shndx = 0; // patched after layout
         symbols.push_back(s);
@@ -295,19 +295,95 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
     uint32_t rodataSectionSymIdx = static_cast<uint32_t>(symbols.size());
     {
         Elf64Sym s{};
-        s.st_name = shstrtab.intern(".rodata");
+        s.st_name = strtab.intern(".rodata");
         s.st_info = stInfo(STB_LOCAL, STT_SECTION);
         s.st_shndx = 0; // patched after layout
         symbols.push_back(s);
     }
+
+    // Defer adding GLOBAL symbols until after all LOCAL symbols
+    // are collected.  ELF requires all LOCAL symbols to precede
+    // all GLOBAL symbols in .symtab.
+
+    // Collect rodata LOCAL symbols first (they depend on section
+    // layout, but we know idx_rodata already).
+    // ---- Build sections in their file order ----
+    // Layout:
+    //   [ELF header]
+    //   [.text data]
+    //   [.rela.text data]
+    //   [.rodata data]
+    //   [.symtab data]
+    //   [.strtab data]
+    //   [.shstrtab data]
+    //   [section headers]
+    std::vector<uint8_t> textData = func.code;
+
+    // For Phase 1 we use no .rodata entries. The infrastructure is
+    // there for future constants (string literals, class vtables).
+    std::vector<uint8_t> rodataData;
+    std::vector<std::pair<std::string, uint64_t>> rodataSymbols;
+    for (const auto &rod : func.rodata)
+    {
+        uint64_t rodOff = rodataData.size();
+        rodataSymbols.push_back({rod.symbol, rodOff});
+        rodataData.insert(rodataData.end(), rod.data.begin(), rod.data.end());
+        if (rodataData.size() % 8)
+        {
+            size_t pad = 8 - (rodataData.size() % 8);
+            rodataData.insert(rodataData.end(), pad, 0);
+        }
+    }
+
+    // We need to know section indices to patch symbols; let's
+    // decide the order up front:
+    //   0: SHN_UNDEF
+    //   1: .text
+    //   2: .rela.text
+    //   3: .rodata
+    //   4: .symtab
+    //   5: .strtab
+    //   6: .shstrtab
+    const int idx_NULL = 0;
+    const int idx_text = 1;
+    const int idx_rela = 2;
+    const int idx_rodata = 3;
+    const int idx_symtab = 4;
+    const int idx_strtab = 5;
+    const int idx_shstrtab = 6;
+    const int total_sections = 7;
+
+    // Patch the section-symbols' shndx.
+    {
+        Elf64Sym &st = symbols[textSectionSymIdx];
+        st.st_shndx = static_cast<uint16_t>(idx_text);
+    }
+    {
+        Elf64Sym &st = symbols[rodataSectionSymIdx];
+        st.st_shndx = static_cast<uint16_t>(idx_rodata);
+    }
+
+    // Add rodata local symbols for string constants (LOCAL, before GLOBALs).
+    for (const auto &rs : rodataSymbols)
+    {
+        Elf64Sym s{};
+        s.st_name = strtab.intern(rs.first);
+        s.st_info = stInfo(STB_LOCAL, STT_OBJECT);
+        s.st_shndx = static_cast<uint16_t>(idx_rodata);
+        s.st_value = rs.second;
+        s.st_size = 0;
+        symbols.push_back(s);
+        symIdx[rs.first] = static_cast<uint32_t>(symbols.size()) - 1;
+    }
+
+    // ---- Now add GLOBAL symbols ----
 
     // The function's public symbol.
     {
         Elf64Sym s{};
         s.st_name = strtab.intern(func.entrySymbol);
         s.st_info = stInfo(STB_GLOBAL, STT_FUNC);
-        // shndx = .text section index (patched later); for now 0
-        s.st_shndx = 0;
+        s.st_shndx = static_cast<uint16_t>(idx_text);
         s.st_value = 0;     // value within .text
         s.st_size = static_cast<uint64_t>(func.code.size());
         symbols.push_back(s);
@@ -330,17 +406,7 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
         symIdx[us.name] = static_cast<uint32_t>(symbols.size()) - 1;
     }
 
-    // ---- Build sections in their file order ----
-    // Layout:
-    //   [ELF header]
-    //   [.text data]
-    //   [.rela.text data]
-    //   [.rodata data]
-    //   [.symtab data]
-    //   [.strtab data]
-    //   [.shstrtab data]
-    //   [section headers]
-    std::vector<uint8_t> textData = func.code;
+    // Build relocations (must happen after symIdx is finalized).
     std::vector<Elf64Rela> relaText;
     for (const auto &r : func.relocs)
     {
@@ -355,21 +421,6 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
         er.r_info = rInfo(it->second, static_cast<uint32_t>(r.kind));
         er.r_addend = r.addend;
         relaText.push_back(er);
-    }
-    // For Phase 1 we use no .rodata entries. The infrastructure is
-    // there for future constants (string literals, class vtables).
-    std::vector<uint8_t> rodataData;
-    std::vector<std::pair<std::string, uint64_t>> rodataSymbols;
-    for (const auto &rod : func.rodata)
-    {
-        uint64_t off = rodataData.size();
-        rodataSymbols.push_back({rod.symbol, off});
-        rodataData.insert(rodataData.end(), rod.data.begin(), rod.data.end());
-        if (rodataData.size() % 8)
-        {
-            size_t pad = 8 - (rodataData.size() % 8);
-            rodataData.insert(rodataData.end(), pad, 0);
-        }
     }
 
     // Build .symtab data
@@ -407,77 +458,8 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
     ehdr.e_ehsize = sizeof(Elf64Ehdr);
     ehdr.e_shentsize = sizeof(Elf64Shdr);
     ehdr.e_phentsize = 0; // no program headers for ET_REL
-
-    // We need to know section indices to patch symbols; let's
-    // decide the order up front:
-    //   0: SHN_UNDEF
-    //   1: .text
-    //   2: .rela.text
-    //   3: .rodata
-    //   4: .symtab
-    //   5: .strtab
-    //   6: .shstrtab
-    const int idx_NULL = 0;
-    const int idx_text = 1;
-    const int idx_rela = 2;
-    const int idx_rodata = 3;
-    const int idx_symtab = 4;
-    const int idx_strtab = 5;
-    const int idx_shstrtab = 6;
-    const int total_sections = 7;
     ehdr.e_shnum = total_sections;
     ehdr.e_shstrndx = idx_shstrtab;
-
-    // Patch the section-symbols' shndx and the function symbol's shndx.
-    // Index 0 of the symbol table is UNDEF; the section symbols
-    // are at indices 1 and 2 in our pre-built table (textSectionSymIdx
-    // and rodataSectionSymIdx, defined above).
-    {
-        Elf64Sym &st = symbols[textSectionSymIdx];
-        st.st_shndx = static_cast<uint16_t>(idx_text);
-    }
-    {
-        Elf64Sym &st = symbols[rodataSectionSymIdx];
-        st.st_shndx = static_cast<uint16_t>(idx_rodata);
-    }
-
-    // Add rodata local symbols for string constants.
-    for (const auto &rs : rodataSymbols)
-    {
-        Elf64Sym s{};
-        s.st_name = strtab.intern(rs.first);
-        s.st_info = stInfo(STB_LOCAL, STT_OBJECT);
-        s.st_shndx = static_cast<uint16_t>(idx_rodata);
-        s.st_value = rs.second;
-        s.st_size = 0;
-        symbols.push_back(s);
-        symIdx[rs.first] = static_cast<uint32_t>(symbols.size()) - 1;
-    }
-
-    {
-        // The function's GLOBAL symbol points to .text.
-        // It was added right after the section symbols.
-        // Find it: the symbol with name == func.entrySymbol.
-        for (auto &s : symbols)
-        {
-            std::string nm = reinterpret_cast<char*>(strtab.bytes.data()) + s.st_name;
-            if (nm == func.entrySymbol)
-            {
-                s.st_shndx = static_cast<uint16_t>(idx_text);
-                s.st_value = 0;
-                break;
-            }
-        }
-    }
-
-    // Rebuild symtabData with the patched symbols.
-    symtabData.clear();
-    for (const auto &s : symbols)
-    {
-        size_t pos = symtabData.size();
-        symtabData.resize(pos + sizeof(Elf64Sym));
-        std::memcpy(&symtabData[pos], &s, sizeof(Elf64Sym));
-    }
 
     // Section header offsets
     off = sizeof(Elf64Ehdr);
@@ -597,7 +579,19 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
     shdr.sh_offset = off_symtab;
     shdr.sh_size = symtabData.size();
     shdr.sh_link = idx_strtab;
-    shdr.sh_info = 4; // index of first global symbol (after null, FILE, .text, .rodata)
+    // sh_info = index of first non-local (GLOBAL) symbol.
+    // Compute dynamically: count symbols with LOCAL binding.
+    {
+        uint32_t firstGlobal = 0;
+        for (const auto &sym : symbols)
+        {
+            if ((sym.st_info >> 4) == STB_LOCAL)
+                firstGlobal++;
+            else
+                break;
+        }
+        shdr.sh_info = firstGlobal;
+    }
     shdr.sh_addralign = 8;
     shdr.sh_entsize = sizeof(Elf64Sym);
     writeShdr(out, shdr);

@@ -331,7 +331,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
                         return name;
                 }
                 RodataEntry e;
-                e.symbol = ".Lstr_" + std::to_string(rod.size());
+                e.symbol = "trypillia_str_" + std::to_string(rod.size());
                 e.data.assign(name.begin(), name.end());
                 e.data.push_back(0);
                 rod.push_back(e);
@@ -533,7 +533,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
                         return name;
                 }
                 RodataEntry e;
-                e.symbol = ".Lstr_" + std::to_string(rod.size());
+                e.symbol = "trypillia_str_" + std::to_string(rod.size());
                 e.data.assign(name.begin(), name.end());
                 e.data.push_back(0);
                 rod.push_back(e);

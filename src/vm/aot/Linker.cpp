@@ -35,7 +35,15 @@ bool Linker::link(const std::string &outPath, const std::vector<std::string> &ob
     {
         cmd << " -L'" << rtDir << "'";
     }
-    cmd << " -ltrypillia_core -ltrypillia_rt -lm -lpthread";
+    cmd << " -Wl,--start-group -ltrypillia_rt -ltrypillia_core -Wl,--end-group";
+    // Transitive dependencies of trypillia_core (must come after the group).
+    // mbedtls is built via FetchContent into _deps/mbedtls-build/library/
+    // under the same build directory that contains libtrypillia_rt.a.
+    if (!rtDir.empty())
+    {
+        cmd << " -L'" << rtDir << "/_deps/mbedtls-build/library'";
+    }
+    cmd << " -lmbedtls -lmbedx509 -lmbedcrypto -lffi -ldl -latomic -lm -lpthread";
     for (const auto &a : ccArgs)
     {
         cmd << " " << a;
