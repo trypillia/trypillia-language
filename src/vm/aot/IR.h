@@ -65,6 +65,13 @@ enum class IROp : uint8_t
     // if (src1 <  immD) { dst = src1; Jump to endLabel } else fallthrough
     RecursiveBaseCase,
 
+    // Store the address of a local variable (base + offset) into a slot.
+    // Used for building upvalue data buffers for closures.
+    // dst = slot to store the address
+    // src1 = base slot (local slot number)
+    // immI = byte offset within the local's slot (usually 0)
+    StoreAddr,
+
     Nop,
 };
 
@@ -75,14 +82,17 @@ struct IRInstr
     int dst = -1;        // virtual register (output)
     int src1 = -1;       // virtual register (operand 1, or -1 for imm)
     int src2 = -1;       // virtual register (operand 2, or -1)
+    int src3 = -1;       // virtual register (operand 3, or -1)
 
     int slot = -1;       // for LoadLocal/StoreLocal/LoadArg/StoreArg
     int argc = 0;        // for CallRuntime/CallDirect (number of VMValue args)
     int endLabel = -1;   // for RecursiveBaseCase (target label after the fast path)
+    int immI = 0;        // integer immediate (for slot numbers, counts, modifiers, etc.)
 
     double immD = 0.0;   // numeric immediate (ConstNum, RecursiveBaseCase threshold)
 
     std::string symbol;  // for CallRuntime/CallDirect: name of the helper to call
+    std::string strArg;  // for helpers needing a string pointer (global/property name, etc.)
 
     size_t sourceBytecodeOffset = 0; // for diagnostics / deopt metadata
 };
@@ -102,6 +112,9 @@ struct IRFunction
     // Map of "label id" -> set of instr indices that jump to it
     std::vector<std::vector<size_t>> labelJumps;
 
+    // String constants referenced by this function (for rodata).
+    std::vector<std::string> stringConstants;
+
     int createLabel()
     {
         int id = static_cast<int>(labelTargetInstr.size());
@@ -118,6 +131,18 @@ struct IRFunction
     void jumpTo(int labelId, size_t fromInstr)
     {
         labelJumps[labelId].push_back(fromInstr);
+    }
+
+    // Look up or add a string constant, returning its index.
+    int addStringConstant(const std::string &s)
+    {
+        for (size_t i = 0; i < stringConstants.size(); ++i)
+        {
+            if (stringConstants[i] == s)
+                return static_cast<int>(i);
+        }
+        stringConstants.push_back(s);
+        return static_cast<int>(stringConstants.size()) - 1;
     }
 };
 

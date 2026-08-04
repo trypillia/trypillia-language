@@ -10,26 +10,17 @@ namespace trypillia::aot
 {
 
 // Lowers a single ObjFunction's Chunk to a typed linear IR. This
-// is the Phase-1 AOT equivalent of the analysis pass inside
+// is the AOT equivalent of the analysis pass inside
 // JITCompiler::compileMathFunction. The lowering is *backend
-// independent* — it produces IR that any CodeSink (sljit today,
-// x64-object tomorrow) can consume.
+// independent* — it produces IR that any CodeSink (x64-object)
+// can consume.
 //
-// Phase-1 scope (matches what `compileMathFunction` already
-// supports, minus classes/lists/maps/closures which are runtime
-// helpers used by every backend identically):
-//
-//   * Pure numeric functions with at most 1-arg recursive calls
-//   * Locals/args, arith, comparisons, control flow
-//   * Modulo (folded to jit_mod_helper call)
-//   * Bitwise ops (folded to int ALU via CVTTSD2SI/CVTSI2SD)
-//   * Recursive base-case fast path (the "hasBaseCase" heuristic
-//     from the JIT, applied identically so AOT and JIT emit
-//     byte-equivalent fast paths for fib-like functions)
-//
-// Out of Phase-1 scope (will be added by re-using jit_*_helper
-// symbols, Phase 3 in the RFC): strings, lists, maps, classes,
-// closures, exceptions, FFI, async.
+// Supports the full Trypillia language: arithmetic, comparisons,
+// control flow, globals, closures, upvalues, classes, methods,
+// properties, lists, maps, indexing, iteration, and all object
+// operations. Operations that require runtime support are lowered
+// to CallRuntime/CallRuntimeVoid instructions that invoke the
+// corresponding jit_*_helper symbols from libtrypillia_rt.
 class IRLowering
 {
   public:

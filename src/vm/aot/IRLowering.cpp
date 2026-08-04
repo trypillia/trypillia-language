@@ -143,9 +143,14 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                  op == static_cast<uint8_t>(OpCode::OP_GET_UPVALUE) ||
                  op == static_cast<uint8_t>(OpCode::OP_SET_UPVALUE) || op == static_cast<uint8_t>(OpCode::OP_CLASS) ||
                  op == static_cast<uint8_t>(OpCode::OP_ABSTRACT_CLASS) ||
+                 op == static_cast<uint8_t>(OpCode::OP_INHERIT) || op == static_cast<uint8_t>(OpCode::OP_MIXIN) ||
                  op == static_cast<uint8_t>(OpCode::OP_GET_SUPER) || op == static_cast<uint8_t>(OpCode::OP_METHOD) ||
                  op == static_cast<uint8_t>(OpCode::OP_ABSTRACT_METHOD) ||
-                 op == static_cast<uint8_t>(OpCode::OP_STATIC_METHOD))
+                 op == static_cast<uint8_t>(OpCode::OP_STATIC_METHOD) ||
+                 op == static_cast<uint8_t>(OpCode::OP_INDEX_GET) ||
+                 op == static_cast<uint8_t>(OpCode::OP_INDEX_SET) ||
+                 op == static_cast<uint8_t>(OpCode::OP_ITER_HAS_NEXT) ||
+                 op == static_cast<uint8_t>(OpCode::OP_CLOSE_UPVALUE))
         {
             i += 2;
         }
@@ -279,9 +284,26 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             break;
         }
         case static_cast<uint8_t>(OpCode::OP_GET_GLOBAL): {
-            // Phase 1 doesn't support globals. Fail.
-            outError = "globals not supported in --aot (Phase 1)";
-            return false;
+            uint8_t constantIdx = c->code[++i];
+            VMValue constant = c->constants[constantIdx];
+            if (sp >= 256)
+            {
+                outError = "stack overflow at OP_GET_GLOBAL";
+                return false;
+            }
+            flushTos(sp);
+            const std::string &name = constant.asString()->flatten();
+            int strIdx = out.addStringConstant(name);
+            IRInstr ins;
+            ins.op = IROp::CallRuntime;
+            ins.dst = sp;
+            ins.symbol = "jit_get_global_helper";
+            ins.strArg = name;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            typeStack[sp] = InferredType::UNKNOWN;
+            sp++;
+            break;
         }
         case static_cast<uint8_t>(OpCode::OP_CONSTANT): {
             uint8_t idx = c->code[++i];
@@ -292,22 +314,23 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 return false;
             }
             double raw = 0.0;
-            if (val.isNumber())
-            {
-                std::memcpy(&raw, &val, sizeof(double));
-            }
-            else
-            {
-                outError = "non-numeric constant in --aot (Phase 1)";
-                return false;
-            }
+            std::memcpy(&raw, &val, sizeof(double));
             IRInstr ins;
             ins.op = IROp::ConstNum;
             ins.dst = sp;
             ins.immD = raw;
             ins.sourceBytecodeOffset = i;
             out.code.push_back(ins);
-            typeStack[sp] = InferredType::NUMBER;
+            if (val.isNumber())
+                typeStack[sp] = InferredType::NUMBER;
+            else if (val.isBool())
+                typeStack[sp] = InferredType::BOOL;
+            else if (val.isNil())
+                typeStack[sp] = InferredType::NIL;
+            else if (val.isString())
+                typeStack[sp] = InferredType::UNKNOWN;
+            else
+                typeStack[sp] = InferredType::UNKNOWN;
             sp++;
             break;
         }
@@ -320,11 +343,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack overflow at OP_CONSTANT_WIDE";
                 return false;
             }
-            if (!val.isNumber())
-            {
-                outError = "non-numeric constant_wide in --aot (Phase 1)";
-                return false;
-            }
             double raw;
             std::memcpy(&raw, &val, sizeof(double));
             IRInstr ins;
@@ -333,7 +351,14 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             ins.immD = raw;
             ins.sourceBytecodeOffset = i;
             out.code.push_back(ins);
-            typeStack[sp] = InferredType::NUMBER;
+            if (val.isNumber())
+                typeStack[sp] = InferredType::NUMBER;
+            else if (val.isBool())
+                typeStack[sp] = InferredType::BOOL;
+            else if (val.isNil())
+                typeStack[sp] = InferredType::NIL;
+            else
+                typeStack[sp] = InferredType::UNKNOWN;
             sp++;
             break;
         }
@@ -585,38 +610,232 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             break;
         }
 
-        case static_cast<uint8_t>(OpCode::OP_DEFINE_GLOBAL):
+        case static_cast<uint8_t>(OpCode::OP_DEFINE_GLOBAL): {
+            uint8_t constantIdx = c->code[++i];
+            VMValue constant = c->constants[constantIdx];
+            const std::string &name = constant.asString()->flatten();
+            flushTos(sp);
+            int strIdx = out.addStringConstant(name);
+            (void)strIdx;
+            IRInstr ins;
+            ins.op = IROp::CallRuntimeVoid;
+            ins.symbol = "jit_set_global_helper";
+            ins.strArg = name;
+            ins.src1 = sp - 1;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            sp--;
+            break;
+        }
         case static_cast<uint8_t>(OpCode::OP_SET_GLOBAL): {
-            outError = "globals not supported in --aot (Phase 1)";
-            return false;
+            uint8_t constantIdx = c->code[++i];
+            VMValue constant = c->constants[constantIdx];
+            const std::string &name = constant.asString()->flatten();
+            flushTos(sp);
+            int strIdx = out.addStringConstant(name);
+            (void)strIdx;
+            IRInstr ins;
+            ins.op = IROp::CallRuntimeVoid;
+            ins.symbol = "jit_set_global_helper";
+            ins.strArg = name;
+            ins.src1 = sp - 1;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            break;
         }
 
-        case static_cast<uint8_t>(OpCode::OP_GET_UPVALUE):
-        case static_cast<uint8_t>(OpCode::OP_SET_UPVALUE):
-        case static_cast<uint8_t>(OpCode::OP_CLOSE_UPVALUE):
+        case static_cast<uint8_t>(OpCode::OP_GET_UPVALUE): {
+            uint8_t slot = c->code[++i];
+            if (sp >= 256)
+            {
+                outError = "stack overflow at OP_GET_UPVALUE";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntime;
+            ins.dst = sp;
+            ins.symbol = "jit_get_upvalue_helper";
+            ins.immI = slot;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            typeStack[sp] = InferredType::UNKNOWN;
+            sp++;
+            break;
+        }
+        case static_cast<uint8_t>(OpCode::OP_SET_UPVALUE): {
+            uint8_t slot = c->code[++i];
+            if (sp == 0)
+            {
+                outError = "stack underflow at OP_SET_UPVALUE";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntimeVoid;
+            ins.symbol = "jit_set_upvalue_helper";
+            ins.immI = slot;
+            ins.src1 = sp - 1;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            sp--;
+            break;
+        }
+        case static_cast<uint8_t>(OpCode::OP_CLOSE_UPVALUE): {
+            if (sp == 0)
+            {
+                outError = "stack underflow at OP_CLOSE_UPVALUE";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntimeVoid;
+            ins.symbol = "jit_close_upvalue_helper";
+            ins.src1 = sp - 1;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            sp--;
+            break;
+        }
         case static_cast<uint8_t>(OpCode::OP_CLOSURE): {
-            outError = "closures not supported in --aot (Phase 1)";
-            return false;
+            uint8_t constIdx = c->code[++i];
+            VMValue funcVal = c->constants[constIdx];
+            int upvalueCount = funcVal.asFunction()->upvalueCount;
+            const uint8_t *upvalueBytes = &c->code[i + 1];
+            double funcRaw;
+            std::memcpy(&funcRaw, &funcVal, sizeof(double));
+            flushTos(sp);
+            // Store funcRaw at sp as a ConstNum first, then build
+            // the upvalue buffer starting at sp+1.
+            IRInstr funcIns;
+            funcIns.op = IROp::ConstNum;
+            funcIns.dst = sp;
+            funcIns.immD = funcRaw;
+            funcIns.sourceBytecodeOffset = i;
+            out.code.push_back(funcIns);
+            // Build upvalue metadata buffer on the stack starting at sp+1.
+            for (int j = 0; j < upvalueCount; ++j)
+            {
+                bool isLocal = upvalueBytes[j * 2] != 0;
+                int index = upvalueBytes[j * 2 + 1];
+                int packed = (isLocal ? 0x100 : 0) | index;
+                double packedD;
+                std::memcpy(&packedD, &packed, sizeof(double));
+                IRInstr metaIns;
+                metaIns.op = IROp::ConstNum;
+                metaIns.dst = sp + 1 + j * 2;
+                metaIns.immD = packedD;
+                metaIns.sourceBytecodeOffset = i;
+                out.code.push_back(metaIns);
+                if (isLocal)
+                {
+                    IRInstr addrIns;
+                    addrIns.op = IROp::StoreAddr;
+                    addrIns.dst = sp + 1 + j * 2 + 1;
+                    addrIns.src1 = index;
+                    addrIns.sourceBytecodeOffset = i;
+                    out.code.push_back(addrIns);
+                }
+                else
+                {
+                    IRInstr zeroIns;
+                    zeroIns.op = IROp::ConstNum;
+                    zeroIns.dst = sp + 1 + j * 2 + 1;
+                    zeroIns.immD = 0.0;
+                    zeroIns.sourceBytecodeOffset = i;
+                    out.code.push_back(zeroIns);
+                }
+            }
+            IRInstr ins;
+            ins.op = IROp::CallRuntime;
+            ins.dst = sp;
+            ins.symbol = "jit_create_closure_helper";
+            ins.src1 = sp + 1; // upvalue_data pointer
+            ins.argc = upvalueCount;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            // sp stays the same: result overwrites funcRaw slot at sp.
+            typeStack[sp] = InferredType::CLOSURE;
+            i += 2 * upvalueCount;
+            break;
         }
 
-        case static_cast<uint8_t>(OpCode::OP_BUILD_LIST):
-        case static_cast<uint8_t>(OpCode::OP_BUILD_MAP):
-        case static_cast<uint8_t>(OpCode::OP_INDEX_GET):
-        case static_cast<uint8_t>(OpCode::OP_INDEX_SET):
-        case static_cast<uint8_t>(OpCode::OP_CLASS):
-        case static_cast<uint8_t>(OpCode::OP_ABSTRACT_CLASS):
-        case static_cast<uint8_t>(OpCode::OP_INHERIT):
-        case static_cast<uint8_t>(OpCode::OP_MIXIN):
-        case static_cast<uint8_t>(OpCode::OP_GET_SUPER):
-        case static_cast<uint8_t>(OpCode::OP_PROPERTY_GET):
-        case static_cast<uint8_t>(OpCode::OP_PROPERTY_SET):
-        case static_cast<uint8_t>(OpCode::OP_METHOD):
-        case static_cast<uint8_t>(OpCode::OP_ABSTRACT_METHOD):
-        case static_cast<uint8_t>(OpCode::OP_STATIC_METHOD):
-        case static_cast<uint8_t>(OpCode::OP_FIELD_MODIFIER):
-        case static_cast<uint8_t>(OpCode::OP_ITER_HAS_NEXT): {
-            outError = std::string("object op not supported in --aot (Phase 1): opcode ") + std::to_string(op);
-            return false;
+        case static_cast<uint8_t>(OpCode::OP_BUILD_LIST): {
+            uint8_t count = c->code[++i];
+            if (sp < count)
+            {
+                outError = "stack underflow at OP_BUILD_LIST";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntime;
+            ins.dst = sp - count;
+            ins.symbol = "jit_build_list_helper";
+            ins.src1 = sp - count;
+            ins.argc = count;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            sp = sp - count + 1;
+            typeStack[sp - 1] = InferredType::OBJECT;
+            break;
+        }
+        case static_cast<uint8_t>(OpCode::OP_BUILD_MAP): {
+            uint8_t count = c->code[++i];
+            if (sp < 2 * count)
+            {
+                outError = "stack underflow at OP_BUILD_MAP";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntime;
+            ins.dst = sp - 2 * count;
+            ins.symbol = "jit_build_map_helper";
+            ins.src1 = sp - 2 * count;
+            ins.argc = count;
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            sp = sp - 2 * count + 1;
+            typeStack[sp - 1] = InferredType::OBJECT;
+            break;
+        }
+        case static_cast<uint8_t>(OpCode::OP_INDEX_GET): {
+            if (sp < 2)
+            {
+                outError = "stack underflow at OP_INDEX_GET";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntime;
+            ins.dst = sp - 2;
+            ins.symbol = "jit_index_get_helper";
+            ins.src1 = sp - 2; // object
+            ins.src2 = sp - 1; // index
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            typeStack[sp - 2] = InferredType::UNKNOWN;
+            sp--;
+            break;
+        }
+        case static_cast<uint8_t>(OpCode::OP_INDEX_SET): {
+            if (sp < 3)
+            {
+                outError = "stack underflow at OP_INDEX_SET";
+                return false;
+            }
+            flushTos(sp);
+            IRInstr ins;
+            ins.op = IROp::CallRuntimeVoid;
+            ins.symbol = "jit_index_set_helper";
+            ins.src1 = sp - 3; // object
+            ins.src2 = sp - 2; // index
+            ins.src3 = sp - 1; // value
+            ins.sourceBytecodeOffset = i;
+            out.code.push_back(ins);
+            sp -= 3;
+            break;
         }
 
         case static_cast<uint8_t>(OpCode::OP_JUMP_IF_FALSE): {
@@ -681,9 +900,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             if (hasBaseCase && argCount == 1)
             {
                 int endLabel = out.createLabel();
-                // RecursiveBaseCase: if (args[calleeSp+1] < threshold)
-                //     args[calleeSp] = args[calleeSp+1]; jmp endLabel
-                // else fall through
                 IRInstr rb;
                 rb.op = IROp::RecursiveBaseCase;
                 rb.dst = calleeSp;
@@ -692,15 +908,13 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 rb.endLabel = endLabel;
                 rb.sourceBytecodeOffset = i;
                 out.code.push_back(rb);
-                // Slow path: recursive call.
                 IRInstr call;
                 call.op = IROp::CallDirect;
                 call.dst = calleeSp;
                 call.argc = argCount;
-                call.symbol = out.name; // recursive call
+                call.symbol = out.name;
                 call.sourceBytecodeOffset = i;
                 out.code.push_back(call);
-                // jmp endLabel
                 IRInstr j;
                 j.op = IROp::Jump;
                 j.src1 = endLabel;
@@ -710,15 +924,22 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             }
             else
             {
-                outError = "OP_CALL: only 1-arg recursive numeric calls supported in --aot (Phase 1)";
-                return false;
+                flushTos(sp);
+                IRInstr call;
+                call.op = IROp::CallRuntime;
+                call.dst = calleeSp;
+                call.symbol = "jit_call_helper";
+                call.src1 = calleeSp;
+                call.argc = argCount;
+                call.sourceBytecodeOffset = i;
+                out.code.push_back(call);
             }
             sp = calleeSp + 1;
             typeStack[calleeSp] = InferredType::UNKNOWN;
             break;
         }
         default:
-            outError = std::string("unsupported opcode in --aot (Phase 1): ") + std::to_string(op);
+            outError = std::string("unsupported opcode in --aot: ") + std::to_string(op);
             return false;
         }
     }

@@ -314,6 +314,19 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
         symIdx[func.entrySymbol] = static_cast<uint32_t>(symbols.size()) - 1;
     }
 
+    // Add rodata local symbols for string constants.
+    for (const auto &rs : rodataSymbols)
+    {
+        Elf64Sym s{};
+        s.st_name = strtab.intern(rs.first);
+        s.st_info = stInfo(STB_LOCAL, STT_OBJECT);
+        s.st_shndx = static_cast<uint16_t>(idx_rodata);
+        s.st_value = rs.second;
+        s.st_size = 0;
+        symbols.push_back(s);
+        symIdx[rs.first] = static_cast<uint32_t>(symbols.size()) - 1;
+    }
+
     // Undefined symbols (jit_*_helper etc.)
     // The caller (X64ObjectBackend / AOTModule) gives us a list of
     // helper symbols that the code references. We add them as
@@ -359,6 +372,18 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
     // For Phase 1 we use no .rodata entries. The infrastructure is
     // there for future constants (string literals, class vtables).
     std::vector<uint8_t> rodataData;
+    std::vector<std::pair<std::string, uint64_t>> rodataSymbols;
+    for (const auto &rod : func.rodata)
+    {
+        uint64_t off = rodataData.size();
+        rodataSymbols.push_back({rod.symbol, off});
+        rodataData.insert(rodataData.end(), rod.data.begin(), rod.data.end());
+        if (rodataData.size() % 8)
+        {
+            size_t pad = 8 - (rodataData.size() % 8);
+            rodataData.insert(rodataData.end(), pad, 0);
+        }
+    }
 
     // Build .symtab data
     std::vector<uint8_t> symtabData;

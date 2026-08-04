@@ -100,6 +100,18 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
         case IROp::Nop:
             break;
 
+        case IROp::StoreAddr: {
+            // Compute address of local variable: R12 + src1*8
+            // Store it to args[dst*8]
+            enc.emitByte(0x4C);
+            enc.emitByte(0x8D);
+            enc.emitModRM(0b10, 0, 0b100);
+            enc.emitSIB(0, 0b100, 4);
+            enc.emitI32(slotOff(ins.src1));
+            enc.movMR(Reg::R12, Reg::RAX);
+            break;
+        }
+
         case IROp::ConstNum: {
             // args[dst*8] = immD
             uint64_t bits;
@@ -311,37 +323,314 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
         }
 
         case IROp::CallRuntime: {
-            // Set up the call per jit_call_helper ABI:
-            //   rdi = vm, xmm0 = callee, rsi = &args[calleeSlot], edx = argc
-            enc.movRR(Reg::RDI, Reg::R13);
-            enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
-            // rsi = r12 + src1*8  (we use LEA with RIP-free encoding)
-            // LEA rsi, [r12 + disp32]: REX.W=1, R=0(R12), opcode 8D,
-            //   ModRM(10, 6, 0b100), SIB(0,4,4), disp32
-            // REX = 0x4C (W=1, R=1 for r12 in modrm.reg; we want
-            // reg=RSI(6) and base=R12(4) so REX.R=1 and REX.B=1).
-            enc.emitByte(0x4C);
-            enc.emitByte(0x8D);
-            enc.emitModRM(0b10, 6, 0b100);
-            enc.emitSIB(0, 0b100, 4);
-            enc.emitI32(slotOff(ins.src1));
-            enc.movRI32(Reg::RDX, ins.argc);
-            enc.callSymbol(ins.symbol);
-            enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            auto &rod = out.rodata;
+            auto loadRodataStr = [&](const std::string &name) -> std::string {
+                for (auto &r : rod)
+                {
+                    if (r.symbol == name)
+                        return name;
+                }
+                RodataEntry e;
+                e.symbol = ".Lstr_" + std::to_string(rod.size());
+                e.data.assign(name.begin(), name.end());
+                e.data.push_back(0);
+                rod.push_back(e);
+                return e.symbol;
+            };
+            auto emitRodataLEA = [&](Reg64 reg, const std::string &name) {
+                std::string sym = loadRodataStr(name);
+                enc.leaRipSymbol(reg, sym);
+            };
+
+            const std::string &sym = ins.symbol;
+            if (sym == "jit_call_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.emitByte(0x4C);
+                enc.emitByte(0x8D);
+                enc.emitModRM(0b10, 6, 0b100);
+                enc.emitSIB(0, 0b100, 4);
+                enc.emitI32(slotOff(ins.src1));
+                enc.movRI32(Reg::RDX, ins.argc);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_get_global_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_set_global_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_build_list_helper" || sym == "jit_build_map_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.emitByte(0x4C);
+                enc.emitByte(0x8D);
+                enc.emitModRM(0b10, 6, 0b100);
+                enc.emitSIB(0, 0b100, 4);
+                enc.emitI32(slotOff(ins.src1));
+                enc.movRI32(Reg::RDX, ins.argc);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_index_get_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_index_set_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.movsdRM(XReg::XMM2, Reg::R12, slotOff(ins.src3));
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_property_get_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_property_set_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_iter_has_next_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_create_class_helper" || sym == "jit_create_abstract_class_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_bind_method_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movRI32(Reg::RDX, ins.immI);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_bind_static_method_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_inherit_helper" || sym == "jit_mixin_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_get_super_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_field_modifier_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movRI32(Reg::RDX, ins.immI);
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_create_closure_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.dst));
+                enc.emitByte(0x4C);
+                enc.emitByte(0x8D);
+                enc.emitModRM(0b10, 6, 0b100);
+                enc.emitSIB(0, 0b100, 4);
+                enc.emitI32(slotOff(ins.src1));
+                enc.movRI32(Reg::RDX, ins.argc);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_get_upvalue_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movRI32(Reg::RDX, ins.immI);
+                enc.callSymbol(sym);
+                enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+            }
+            else if (sym == "jit_set_upvalue_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movRI32(Reg::RDX, ins.immI);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_close_upvalue_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.emitByte(0x4C);
+                enc.emitByte(0x8D);
+                enc.emitModRM(0b10, 6, 0b100);
+                enc.emitSIB(0, 0b100, 4);
+                enc.emitI32(slotOff(ins.src1));
+                enc.callSymbol(sym);
+            }
+            else
+            {
+                // Fallback: generic call (vm in RDI, XMM0=src1, RSI=args*, EDX=argc)
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.emitByte(0x4C);
+                enc.emitByte(0x8D);
+                enc.emitModRM(0b10, 6, 0b100);
+                enc.emitSIB(0, 0b100, 4);
+                enc.emitI32(slotOff(ins.src1));
+                enc.movRI32(Reg::RDX, ins.argc);
+                enc.callSymbol(sym);
+                if (ins.dst >= 0)
+                {
+                    enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
+                }
+            }
             break;
         }
         case IROp::CallRuntimeVoid: {
-            enc.movRR(Reg::RDI, Reg::R13);
-            enc.emitByte(0x4C);
-            enc.emitByte(0x8D);
-            enc.emitModRM(0b10, 6, 0b100);
-            enc.emitSIB(0, 0b100, 4);
-            enc.emitI32(slotOff(ins.src1));
-            if (ins.argc > 0)
+            auto &rod = out.rodata;
+            auto loadRodataStr = [&](const std::string &name) -> std::string {
+                for (auto &r : rod)
+                {
+                    if (r.symbol == name)
+                        return name;
+                }
+                RodataEntry e;
+                e.symbol = ".Lstr_" + std::to_string(rod.size());
+                e.data.assign(name.begin(), name.end());
+                e.data.push_back(0);
+                rod.push_back(e);
+                return e.symbol;
+            };
+            auto emitRodataLEA = [&](Reg64 reg, const std::string &name) {
+                std::string sym = loadRodataStr(name);
+                enc.leaRipSymbol(reg, sym);
+            };
+
+            const std::string &sym = ins.symbol;
+            if (sym == "jit_set_global_helper")
             {
-                enc.movRI32(Reg::RDX, ins.argc);
+                enc.movRR(Reg::RDI, Reg::R13);
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.callSymbol(sym);
             }
-            enc.callSymbol(ins.symbol);
+            else if (sym == "jit_define_global_helper" || sym == "jit_set_global_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_inherit_helper" || sym == "jit_mixin_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_set_upvalue_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movRI32(Reg::RDX, ins.immI);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_close_upvalue_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.emitByte(0x4C);
+                enc.emitByte(0x8D);
+                enc.emitModRM(0b10, 6, 0b100);
+                enc.emitSIB(0, 0b100, 4);
+                enc.emitI32(slotOff(ins.src1));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_field_modifier_helper")
+            {
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movRI32(Reg::RDX, ins.immI);
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_index_set_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.movsdRM(XReg::XMM2, Reg::R12, slotOff(ins.src3));
+                enc.callSymbol(sym);
+            }
+            else if (sym == "jit_property_set_helper")
+            {
+                enc.movRR(Reg::RDI, Reg::R13);
+                enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                emitRodataLEA(Reg::RSI, ins.strArg);
+                enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                enc.callSymbol(sym);
+            }
+            else
+            {
+                // Fallback
+                enc.movRR(Reg::RDI, Reg::R13);
+                if (ins.src1 >= 0)
+                {
+                    enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
+                }
+                if (ins.src2 >= 0)
+                {
+                    enc.movsdRM(XReg::XMM1, Reg::R12, slotOff(ins.src2));
+                }
+                if (!ins.strArg.empty())
+                {
+                    emitRodataLEA(Reg::RSI, ins.strArg);
+                }
+                if (ins.argc > 0)
+                {
+                    enc.movRI32(Reg::RDX, ins.argc);
+                }
+                if (ins.immI != 0)
+                {
+                    enc.movRI32(Reg::RDX, ins.immI);
+                }
+                enc.callSymbol(sym);
+            }
             break;
         }
         case IROp::CallDirect: {
