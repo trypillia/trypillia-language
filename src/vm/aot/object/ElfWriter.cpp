@@ -314,19 +314,6 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
         symIdx[func.entrySymbol] = static_cast<uint32_t>(symbols.size()) - 1;
     }
 
-    // Add rodata local symbols for string constants.
-    for (const auto &rs : rodataSymbols)
-    {
-        Elf64Sym s{};
-        s.st_name = strtab.intern(rs.first);
-        s.st_info = stInfo(STB_LOCAL, STT_OBJECT);
-        s.st_shndx = static_cast<uint16_t>(idx_rodata);
-        s.st_value = rs.second;
-        s.st_size = 0;
-        symbols.push_back(s);
-        symIdx[rs.first] = static_cast<uint32_t>(symbols.size()) - 1;
-    }
-
     // Undefined symbols (jit_*_helper etc.)
     // The caller (X64ObjectBackend / AOTModule) gives us a list of
     // helper symbols that the code references. We add them as
@@ -453,6 +440,20 @@ bool ElfWriter::write(const std::string &path, const x64::BackendResult &func, c
         Elf64Sym &st = symbols[rodataSectionSymIdx];
         st.st_shndx = static_cast<uint16_t>(idx_rodata);
     }
+
+    // Add rodata local symbols for string constants.
+    for (const auto &rs : rodataSymbols)
+    {
+        Elf64Sym s{};
+        s.st_name = strtab.intern(rs.first);
+        s.st_info = stInfo(STB_LOCAL, STT_OBJECT);
+        s.st_shndx = static_cast<uint16_t>(idx_rodata);
+        s.st_value = rs.second;
+        s.st_size = 0;
+        symbols.push_back(s);
+        symIdx[rs.first] = static_cast<uint32_t>(symbols.size()) - 1;
+    }
+
     {
         // The function's GLOBAL symbol points to .text.
         // It was added right after the section symbols.

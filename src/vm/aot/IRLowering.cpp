@@ -291,7 +291,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack overflow at OP_GET_GLOBAL";
                 return false;
             }
-            flushTos(sp);
             const std::string &name = constant.asString()->flatten();
             int strIdx = out.addStringConstant(name);
             IRInstr ins;
@@ -614,7 +613,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             uint8_t constantIdx = c->code[++i];
             VMValue constant = c->constants[constantIdx];
             const std::string &name = constant.asString()->flatten();
-            flushTos(sp);
             int strIdx = out.addStringConstant(name);
             (void)strIdx;
             IRInstr ins;
@@ -631,7 +629,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             uint8_t constantIdx = c->code[++i];
             VMValue constant = c->constants[constantIdx];
             const std::string &name = constant.asString()->flatten();
-            flushTos(sp);
             int strIdx = out.addStringConstant(name);
             (void)strIdx;
             IRInstr ins;
@@ -651,7 +648,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack overflow at OP_GET_UPVALUE";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntime;
             ins.dst = sp;
@@ -670,7 +666,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack underflow at OP_SET_UPVALUE";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntimeVoid;
             ins.symbol = "jit_set_upvalue_helper";
@@ -687,7 +682,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack underflow at OP_CLOSE_UPVALUE";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntimeVoid;
             ins.symbol = "jit_close_upvalue_helper";
@@ -704,7 +698,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             const uint8_t *upvalueBytes = &c->code[i + 1];
             double funcRaw;
             std::memcpy(&funcRaw, &funcVal, sizeof(double));
-            flushTos(sp);
             // Store funcRaw at sp as a ConstNum first, then build
             // the upvalue buffer starting at sp+1.
             IRInstr funcIns;
@@ -718,9 +711,7 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             {
                 bool isLocal = upvalueBytes[j * 2] != 0;
                 int index = upvalueBytes[j * 2 + 1];
-                int packed = (isLocal ? 0x100 : 0) | index;
-                double packedD;
-                std::memcpy(&packedD, &packed, sizeof(double));
+                double packedD = static_cast<double>((isLocal ? 0x100 : 0) | index);
                 IRInstr metaIns;
                 metaIns.op = IROp::ConstNum;
                 metaIns.dst = sp + 1 + j * 2;
@@ -767,7 +758,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack underflow at OP_BUILD_LIST";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntime;
             ins.dst = sp - count;
@@ -787,7 +777,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack underflow at OP_BUILD_MAP";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntime;
             ins.dst = sp - 2 * count;
@@ -806,7 +795,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack underflow at OP_INDEX_GET";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntime;
             ins.dst = sp - 2;
@@ -825,7 +813,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack underflow at OP_INDEX_SET";
                 return false;
             }
-            flushTos(sp);
             IRInstr ins;
             ins.op = IROp::CallRuntimeVoid;
             ins.symbol = "jit_index_set_helper";
@@ -924,7 +911,6 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             }
             else
             {
-                flushTos(sp);
                 IRInstr call;
                 call.op = IROp::CallRuntime;
                 call.dst = calleeSp;
