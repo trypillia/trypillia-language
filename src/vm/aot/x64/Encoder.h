@@ -171,7 +171,7 @@ class Encoder
 
     // MOV [r64], imm32 (sign-extended; for storing small ints in
     // local slots)
-    void movMI32(Reg64 base, int32_t imm);
+    void movMI32(Reg64 base, int32_t disp, int32_t imm);
 
     // --- XMM (SSE2 scalar double) ---
 

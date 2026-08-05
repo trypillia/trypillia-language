@@ -44,17 +44,8 @@ static void emitMovImm64ToMem(Encoder &enc, Reg base, int32_t off, uint64_t bits
 {
     int32_t lo = static_cast<int32_t>(bits & 0xffffffff);
     int32_t hi = static_cast<int32_t>((bits >> 32) & 0xffffffff);
-    enc.movMI32(base, off);
-    auto &code = enc.code();
-    code[code.size() - 4] = static_cast<uint8_t>(lo & 0xff);
-    code[code.size() - 3] = static_cast<uint8_t>((lo >> 8) & 0xff);
-    code[code.size() - 2] = static_cast<uint8_t>((lo >> 16) & 0xff);
-    code[code.size() - 1] = static_cast<uint8_t>((lo >> 24) & 0xff);
-    enc.movMI32(base, off + 4);
-    code[code.size() - 4] = static_cast<uint8_t>(hi & 0xff);
-    code[code.size() - 3] = static_cast<uint8_t>((hi >> 8) & 0xff);
-    code[code.size() - 2] = static_cast<uint8_t>((hi >> 16) & 0xff);
-    code[code.size() - 1] = static_cast<uint8_t>((hi >> 24) & 0xff);
+    enc.movMI32(base, off, lo);
+    enc.movMI32(base, off + 4, hi);
 }
 
 BackendResult X64ObjectBackend::compile(const IRFunction &ir)

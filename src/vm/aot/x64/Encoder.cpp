@@ -122,21 +122,24 @@ void Encoder::movRI32(Reg64 dst, int32_t imm)
     emitI32(imm);
 }
 
-void Encoder::movMI32(Reg64 base, int32_t imm)
+void Encoder::movMI32(Reg64 base, int32_t disp, int32_t imm)
 {
-    // MOV [base], imm32 -> REX.W + C7 /0
+    // MOV [base+disp32], imm32 -> REX.W + C7 /0
     if (base == Reg64::RSP || base == Reg64::R12)
     {
+        // Need SIB for rsp/r12
         emitRex(true, 0, 0, isHighReg(base) ? 1 : 0);
         emitByte(0xC7);
-        emitModRM(0b00, 0, 0b100);
+        emitModRM(0b10, 0, 0b100);
         emitSIB(0, 0b100, low3(base));
+        emitI32(disp);
     }
     else
     {
         emitRex(true, 0, 0, isHighReg(base) ? 1 : 0);
         emitByte(0xC7);
-        emitModRM(0b00, 0, low3(base));
+        emitModRM(0b10, 0, low3(base));
+        emitI32(disp);
     }
     emitI32(imm);
 }
