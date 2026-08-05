@@ -173,6 +173,9 @@ class Encoder
     // local slots)
     void movMI32(Reg64 base, int32_t disp, int32_t imm);
 
+    // LEA r64, [base+disp32]
+    void leaRM(Reg64 dst, Reg64 base, int32_t disp);
+
     // --- XMM (SSE2 scalar double) ---
 
     // MOVSD xmm, xmm

@@ -94,11 +94,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
         case IROp::StoreAddr: {
             // Compute address of local variable: R12 + src1*8
             // Store it to args[dst*8]
-            enc.emitByte(0x4C);
-            enc.emitByte(0x8D);
-            enc.emitModRM(0b10, 0, 0b100);
-            enc.emitSIB(0, 0b100, 4);
-            enc.emitI32(slotOff(ins.src1));
+            enc.leaRM(Reg::RAX, Reg::R12, slotOff(ins.src1));
             enc.movMR(Reg::R12, Reg::RAX);
             break;
         }
@@ -338,11 +334,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
             {
                 enc.movRR(Reg::RDI, Reg::R13);
                 enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
-                enc.emitByte(0x4C);
-                enc.emitByte(0x8D);
-                enc.emitModRM(0b10, 6, 0b100);
-                enc.emitSIB(0, 0b100, 4);
-                enc.emitI32(slotOff(ins.src1));
+                enc.leaRM(Reg::RSI, Reg::R12, slotOff(ins.src1));
                 enc.movRI32(Reg::RDX, ins.argc);
                 enc.callSymbol(sym);
                 enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
@@ -364,11 +356,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
             else if (sym == "jit_build_list_helper" || sym == "jit_build_map_helper")
             {
                 enc.movRR(Reg::RDI, Reg::R13);
-                enc.emitByte(0x4C);
-                enc.emitByte(0x8D);
-                enc.emitModRM(0b10, 6, 0b100);
-                enc.emitSIB(0, 0b100, 4);
-                enc.emitI32(slotOff(ins.src1));
+                enc.leaRM(Reg::RSI, Reg::R12, slotOff(ins.src1));
                 enc.movRI32(Reg::RDX, ins.argc);
                 enc.callSymbol(sym);
                 enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
@@ -463,11 +451,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
             {
                 enc.movRR(Reg::RDI, Reg::R13);
                 enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.dst));
-                enc.emitByte(0x4C);
-                enc.emitByte(0x8D);
-                enc.emitModRM(0b10, 6, 0b100);
-                enc.emitSIB(0, 0b100, 4);
-                enc.emitI32(slotOff(ins.src1));
+                enc.leaRM(Reg::RSI, Reg::R12, slotOff(ins.src1));
                 enc.movRI32(Reg::RDX, ins.argc);
                 enc.callSymbol(sym);
                 enc.movsdMR(Reg::R12, slotOff(ins.dst), XReg::XMM0);
@@ -489,11 +473,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
             else if (sym == "jit_close_upvalue_helper")
             {
                 enc.movRR(Reg::RDI, Reg::R13);
-                enc.emitByte(0x4C);
-                enc.emitByte(0x8D);
-                enc.emitModRM(0b10, 6, 0b100);
-                enc.emitSIB(0, 0b100, 4);
-                enc.emitI32(slotOff(ins.src1));
+                enc.leaRM(Reg::RSI, Reg::R12, slotOff(ins.src1));
                 enc.callSymbol(sym);
             }
             else
@@ -501,11 +481,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
                 // Fallback: generic call (vm in RDI, XMM0=src1, RSI=args*, EDX=argc)
                 enc.movRR(Reg::RDI, Reg::R13);
                 enc.movsdRM(XReg::XMM0, Reg::R12, slotOff(ins.src1));
-                enc.emitByte(0x4C);
-                enc.emitByte(0x8D);
-                enc.emitModRM(0b10, 6, 0b100);
-                enc.emitSIB(0, 0b100, 4);
-                enc.emitI32(slotOff(ins.src1));
+                enc.leaRM(Reg::RSI, Reg::R12, slotOff(ins.src1));
                 enc.movRI32(Reg::RDX, ins.argc);
                 enc.callSymbol(sym);
                 if (ins.dst >= 0)
@@ -566,11 +542,7 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
             else if (sym == "jit_close_upvalue_helper")
             {
                 enc.movRR(Reg::RDI, Reg::R13);
-                enc.emitByte(0x4C);
-                enc.emitByte(0x8D);
-                enc.emitModRM(0b10, 6, 0b100);
-                enc.emitSIB(0, 0b100, 4);
-                enc.emitI32(slotOff(ins.src1));
+                enc.leaRM(Reg::RSI, Reg::R12, slotOff(ins.src1));
                 enc.callSymbol(sym);
             }
             else if (sym == "jit_field_modifier_helper")

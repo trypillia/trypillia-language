@@ -144,6 +144,45 @@ void Encoder::movMI32(Reg64 base, int32_t disp, int32_t imm)
     emitI32(imm);
 }
 
+void Encoder::leaRM(Reg64 dst, Reg64 base, int32_t disp)
+{
+    // REX.W 8D /r  (LEA r64, [base+disp])
+    auto d = static_cast<uint8_t>(dst);
+    bool disp8 = (disp >= -128 && disp <= 127);
+    if (base == Reg64::RSP || base == Reg64::R12)
+    {
+        emitRex(true, isHighReg(dst) ? 1 : 0, 0, isHighReg(base) ? 1 : 0);
+        emitByte(0x8D);
+        if (disp8)
+        {
+            emitModRM(0b01, d & 7, 0b100);
+            emitSIB(0, 0b100, low3(base));
+            emitByte(static_cast<int8_t>(disp));
+        }
+        else
+        {
+            emitModRM(0b10, d & 7, 0b100);
+            emitSIB(0, 0b100, low3(base));
+            emitI32(disp);
+        }
+    }
+    else
+    {
+        emitRex(true, isHighReg(dst) ? 1 : 0, 0, isHighReg(base) ? 1 : 0);
+        emitByte(0x8D);
+        if (disp8)
+        {
+            emitModRM(0b01, d & 7, low3(base));
+            emitByte(static_cast<int8_t>(disp));
+        }
+        else
+        {
+            emitModRM(0b10, d & 7, low3(base));
+            emitI32(disp);
+        }
+    }
+}
+
 // --- XMM scalar double ---
 
 void Encoder::movsdRR(Xmm dst, Xmm src)
