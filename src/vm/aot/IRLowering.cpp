@@ -312,6 +312,18 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
                 outError = "stack overflow at OP_CONSTANT";
                 return false;
             }
+            if (val.isObj())
+            {
+                // Object constants (strings, functions, ...) live on the
+                // compiler-process heap. Embedding their raw pointer here
+                // would dangle the moment the standalone AOT binary runs
+                // in a separate process. Refuse rather than corrupt.
+                outError = "unsupported construct for --aot (Phase 1): non-numeric constant "
+                           "(string/object literal) is not supported. --aot Phase 1 only "
+                           "supports purely numeric top-level scripts; omit --aot for full "
+                           "language support.";
+                return false;
+            }
             double raw = 0.0;
             std::memcpy(&raw, &val, sizeof(double));
             IRInstr ins;
@@ -340,6 +352,14 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
             if (sp >= 256)
             {
                 outError = "stack overflow at OP_CONSTANT_WIDE";
+                return false;
+            }
+            if (val.isObj())
+            {
+                outError = "unsupported construct for --aot (Phase 1): non-numeric constant "
+                           "(string/object literal) is not supported. --aot Phase 1 only "
+                           "supports purely numeric top-level scripts; omit --aot for full "
+                           "language support.";
                 return false;
             }
             double raw;
@@ -694,63 +714,20 @@ bool IRLowering::lower(ObjFunction *function, IRFunction &out, std::string &outE
         case static_cast<uint8_t>(OpCode::OP_CLOSURE): {
             uint8_t constIdx = c->code[++i];
             VMValue funcVal = c->constants[constIdx];
-            int upvalueCount = funcVal.asFunction()->upvalueCount;
-            const uint8_t *upvalueBytes = &c->code[i + 1];
-            double funcRaw;
-            std::memcpy(&funcRaw, &funcVal, sizeof(double));
-            // Store funcRaw at sp as a ConstNum first, then build
-            // the upvalue buffer starting at sp+1.
-            IRInstr funcIns;
-            funcIns.op = IROp::ConstNum;
-            funcIns.dst = sp;
-            funcIns.immD = funcRaw;
-            funcIns.sourceBytecodeOffset = i;
-            out.code.push_back(funcIns);
-            // Build upvalue metadata buffer on the stack starting at sp+1.
-            for (int j = 0; j < upvalueCount; ++j)
-            {
-                bool isLocal = upvalueBytes[j * 2] != 0;
-                int index = upvalueBytes[j * 2 + 1];
-                double packedD = static_cast<double>((isLocal ? 0x100 : 0) | index);
-                IRInstr metaIns;
-                metaIns.op = IROp::ConstNum;
-                metaIns.dst = sp + 1 + j * 2;
-                metaIns.immD = packedD;
-                metaIns.sourceBytecodeOffset = i;
-                out.code.push_back(metaIns);
-                if (isLocal)
-                {
-                    IRInstr addrIns;
-                    addrIns.op = IROp::StoreAddr;
-                    addrIns.dst = sp + 1 + j * 2 + 1;
-                    addrIns.src1 = index;
-                    addrIns.sourceBytecodeOffset = i;
-                    out.code.push_back(addrIns);
-                }
-                else
-                {
-                    IRInstr zeroIns;
-                    zeroIns.op = IROp::ConstNum;
-                    zeroIns.dst = sp + 1 + j * 2 + 1;
-                    zeroIns.immD = 0.0;
-                    zeroIns.sourceBytecodeOffset = i;
-                    out.code.push_back(zeroIns);
-                }
-            }
-            IRInstr ins;
-            ins.op = IROp::CallRuntime;
-            ins.dst = sp;
-            ins.symbol = "jit_create_closure_helper";
-            ins.src1 = sp + 1; // upvalue_data pointer
-            ins.argc = upvalueCount;
-            ins.sourceBytecodeOffset = i;
-            out.code.push_back(ins);
-            // sp stays the same: result overwrites funcRaw slot at sp.
-            typeStack[sp] = InferredType::CLOSURE;
-            i += 2 * upvalueCount;
-            break;
+            // AOT Phase 1 only compiles the top-level script function to
+            // native code; nested/named functions are never serialized
+            // into the executable. Embedding the raw (compiler-process)
+            // ObjFunction* here would produce a dangling pointer that
+            // crashes the very first time the AOT binary runs (see
+            // jit_create_closure_helper / jit_call_helper). Refuse to
+            // build rather than emit a binary that segfaults.
+            outError = "unsupported construct for --aot (Phase 1): function/closure "
+                       "creation ('" +
+                       (funcVal.asFunction() ? funcVal.asFunction()->name : std::string("<anonymous>")) +
+                       "') is not supported. --aot Phase 1 only supports purely numeric "
+                       "top-level scripts; omit --aot for full language support.";
+            return false;
         }
-
         case static_cast<uint8_t>(OpCode::OP_BUILD_LIST): {
             uint8_t count = c->code[++i];
             if (sp < count)
