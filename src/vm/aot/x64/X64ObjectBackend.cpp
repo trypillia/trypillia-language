@@ -624,8 +624,10 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
             {
                 enc.xorpsRR(XReg::XMM0, XReg::XMM0);
             }
-            enc.emitByte(0x41);
-            enc.emitByte(0x5E); // pop r14 (not used but keeps stack balanced)
+            // Prologue only pushed r12 and r13 (in that order), so the
+            // epilogue must pop exactly those two, in reverse order.
+            // (A stray extra pop here previously consumed the return
+            // address off the stack, corrupting every AOT `return`.)
             enc.emitByte(0x41);
             enc.emitByte(0x5D); // pop r13
             enc.emitByte(0x41);
@@ -695,12 +697,12 @@ BackendResult X64ObjectBackend::compile(const IRFunction &ir)
     if (!hasReturn)
     {
         enc.xorpsRR(XReg::XMM0, XReg::XMM0);
+        // Prologue only pushed r12 and r13 (in that order), so the
+        // epilogue must pop exactly those two, in reverse order.
         enc.emitByte(0x41);
-        enc.emitByte(0x5E);
+        enc.emitByte(0x5D); // pop r13
         enc.emitByte(0x41);
-        enc.emitByte(0x5D);
-        enc.emitByte(0x41);
-        enc.emitByte(0x5C);
+        enc.emitByte(0x5C); // pop r12
         enc.ret();
     }
 
